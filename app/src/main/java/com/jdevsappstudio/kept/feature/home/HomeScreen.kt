@@ -1,5 +1,7 @@
 package com.jdevsappstudio.kept.feature.home
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,7 +43,7 @@ fun HomeRoot(viewModel: HomeViewModel = koinViewModel()) {
 fun HomeScreen(state: HomeState, onAction: (HomeAction) -> Unit) {
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { inner ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(inner).padding(24.dp),
+            modifier = Modifier.fillMaxSize().padding(inner).verticalScroll(rememberScrollState()).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text("Kept", style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.onBackground)

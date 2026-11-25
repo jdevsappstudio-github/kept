@@ -49,7 +49,7 @@ fun ReaderSpikeRoot(viewModel: ReaderSpikeViewModel = koinViewModel()) {
 @Composable
 private fun ReaderSpikeScreen(state: ReaderSpikeState, onPick: () -> Unit, onAction: (ReaderSpikeAction) -> Unit) {
     Column(
-        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+        modifier = Modifier.fillMaxWidth(), // Home scrolls (nested vertical scroll would crash)
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("Reader spike (debug)", style = MaterialTheme.typography.titleLarge)

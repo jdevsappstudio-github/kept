@@ -1,6 +1,13 @@
 package com.jdevsappstudio.kept.feature.add
 
 import android.annotation.SuppressLint
+import android.net.Uri
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import android.os.Build
 import android.os.ext.SdkExtensions
 import android.provider.MediaStore
@@ -35,6 +42,8 @@ fun AddDebug(viewModel: AddViewModel = koinViewModel(), imports: PickedImports =
     var last by remember { mutableStateOf("") }
     val on = viewModel::onAction
     val style = MaterialTheme.typography.bodySmall
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(pickerLimit(Keeper.MAX_PER_BATCH))) { uris ->
         on(AddAction.OnPicked(uris.map { it.toString() }))
@@ -50,6 +59,16 @@ fun AddDebug(viewModel: AddViewModel = koinViewModel(), imports: PickedImports =
 
     Row {
         TextButton(onClick = { on(AddAction.OnPickScreenshots) }) { Text("Pick (debug)") }
+        // Test images pushed into files/import (adb + run-as) go in as if picked: same AddViewModel → PickedImports path.
+        TextButton(onClick = {
+            scope.launch {
+                val refs = withContext(Dispatchers.IO) {
+                    File(context.filesDir, "import").listFiles().orEmpty().filter { it.isFile }.sortedBy { it.name }
+                        .map { Uri.fromFile(it).toString() }
+                }
+                on(AddAction.OnPicked(refs))
+            }
+        }) { Text("Import") }
         TextButton(onClick = { on(AddAction.OnPasteLink) }, enabled = !state.keeping) {
             Text(if (state.clip == ClipPeek.LINK) "Paste · a link is copied" else "Paste a link")
         }

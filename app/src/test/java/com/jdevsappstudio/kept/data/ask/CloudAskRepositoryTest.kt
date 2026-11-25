@@ -57,6 +57,14 @@ class CloudAskRepositoryTest {
     }
 
     @Test
+    fun `markers leave the stored answer and fill in missing refs`() = runTest {
+        repo(FakeAsker(FakeAsker.ok("Start with Prisoners [1], then Gone Girl [2]."))).send("thriller")
+        val turn = store.rows.value.single().turn
+        assertThat(turn.answer).isEqualTo("Start with Prisoners, then Gone Girl.")
+        assertThat(turn.refs.map { it.saveId }).containsExactly(3L, 1L)
+    }
+
+    @Test
     fun `gates stop before anything is stored or sent`() = runTest {
         val asker = FakeAsker()
         val repo = repo(asker)

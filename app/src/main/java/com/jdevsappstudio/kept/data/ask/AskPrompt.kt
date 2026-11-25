@@ -77,7 +77,7 @@ object AskPrompt {
         val text = buildString {
             appendLine("You answer questions about the person's own saved screenshots and links, kept in the Kept app.")
             appendLine("Use only the numbered saves below; don't add facts that aren't in them. If they don't answer the question, say so.")
-            appendLine("Keep it short and friendly. Refer to saves by title.")
+            appendLine("Keep it short and friendly. Refer to saves by title; don't write [numbers] in the answer, list them in refs.")
             if (history.isNotEmpty()) {
                 appendLine()
                 appendLine("Earlier in this chat:")
@@ -96,6 +96,16 @@ object AskPrompt {
         }
         return BuiltPrompt(text, used.take(blocks.size).map { it.id })
     }
+
+    private val MARKER = Regex("\\s*\\[(\\d+(?:\\s*,\\s*\\d+)*)]")
+
+    /** '[3]' / '[1, 4]' markers the model sometimes writes into the text despite the schema (seen 25 Nov, OnePlus 8). */
+    fun markers(answer: String): List<Int> =
+        MARKER.findAll(answer).flatMap { m -> m.groupValues[1].split(',').mapNotNull { it.trim().toIntOrNull() } }.distinct().toList()
+
+    /** The answer without those markers (the ref chips show the saves), spacing before punctuation tidied. */
+    fun cleanAnswer(answer: String): String =
+        answer.replace(MARKER, "").replace(Regex(" +([,.;:!?])"), "$1").trim()
 
     /** The model's ref numbers → save ids: in its order, no repeats, out-of-range numbers dropped. */
     fun refIds(refs: List<Int>, saveIds: List<Long>): List<Long> =

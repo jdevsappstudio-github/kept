@@ -39,6 +39,10 @@ internal object AiErrors {
         val m = message?.lowercase() ?: return null
         return when {
             "per_app_battery_use_quota" in m -> ReadFailure.DEVICE_QUOTA
+            // Free tier is 15 requests/minute (seen 25 Nov, OnePlus 8): same 429 text, but it clears in seconds.
+            // Only a per-day limit means 'wait for tomorrow'.
+            "per day" in m || "perday" in m -> ReadFailure.QUOTA
+            "per minute" in m || "perminute" in m || "please retry in" in m -> ReadFailure.BUSY
             "exceeded your current quota" in m -> ReadFailure.QUOTA
             "resource exhausted" in m || "high demand" in m || "overloaded" in m ||
                 "try again later" in m || "busy" in m || "unavailable" in m -> ReadFailure.BUSY

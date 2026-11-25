@@ -102,7 +102,9 @@ class CloudAskRepository(
                 store.markSent(turnId, prompt.saveIds, sentId)
                 when (val result = asker.ask(prompt.text)) {
                     is AskResult.Success -> {
-                        store.finish(turnId, result.answer.answer, result.model, AskPrompt.refIds(result.answer.refs, prompt.saveIds))
+                        val raw = result.answer.answer
+                        val refs = result.answer.refs.ifEmpty { AskPrompt.markers(raw) }
+                        store.finish(turnId, AskPrompt.cleanAnswer(raw), result.model, AskPrompt.refIds(refs, prompt.saveIds))
                         quota.use(CloudMeter.ANSWERS) // only successes count (H57)
                         AskOutcome.Answered
                     }

@@ -94,6 +94,15 @@ class AskPromptTest {
         assertThat(p.text).doesNotContain("Earlier in this chat")
     }
 
+    /** The real answer shape from the OnePlus 8 (25 Nov). */
+    @Test
+    fun `inline markers are stripped from the text and can stand in for refs`() {
+        val raw = "You saved Submit Apps for review [1], a Kotlin app video [3], and two astrology apps [4, 14]."
+        assertThat(AskPrompt.cleanAnswer(raw)).isEqualTo("You saved Submit Apps for review, a Kotlin app video, and two astrology apps.")
+        assertThat(AskPrompt.markers(raw)).containsExactly(1, 3, 4, 14)
+        assertThat(AskPrompt.markers("No saves match.")).isEmpty()
+    }
+
     @Test
     fun `ref numbers map to save ids in order, repeats and bad numbers dropped`() {
         assertThat(AskPrompt.refIds(listOf(2, 0, 2, 9, 1), listOf(10L, 20L, 30L))).containsExactly(20L, 10L)
