@@ -42,6 +42,7 @@ import com.jdevsappstudio.kept.feature.library.detail.SaveDetailRoot
 import com.jdevsappstudio.kept.feature.library.edit.EditSaveRoot
 import com.jdevsappstudio.kept.feature.library.list.SaveListRoot
 import com.jdevsappstudio.kept.feature.library.shelf.ShelfRoot
+import com.jdevsappstudio.kept.feature.search.SearchRoot
 import com.jdevsappstudio.kept.feature.library.shelves.ShelvesRoot
 import kotlin.reflect.KClass
 
@@ -82,7 +83,15 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
                 )
             }
             // Screens below are filled in by the next UI-sweep chunks (H51); until then each is a titled stub.
-            composable<SearchRoute> { Stub("Search", nav, back = false) }
+            composable<SearchRoute> {
+                SearchRoot(
+                    onBack = { nav.popBackStack() },
+                    onOpenSave = { nav.navigate(SaveDetailRoute(it)) },
+                    onOpenShelf = { nav.navigate(ShelfRoute(it)) },
+                    onOpenNeedsLook = { nav.navigate(NeedLookRoute) },
+                    onOpenAsk = { nav.navigate(AskRoute(question = it)) },
+                )
+            }
             composable<AskRoute> { Stub("Ask", nav, back = false) }
             composable<SaveListRoute> {
                 SaveListRoot(
