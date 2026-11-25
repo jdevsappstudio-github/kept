@@ -39,12 +39,14 @@ sealed interface AddAction {
     data class OnPasteTextChange(val text: String) : AddAction
     data object OnAddPasted : AddAction
     data object OnShareFromApp : AddAction
+    /** Back or a tap outside the sheet: handled by the Root (closes). */
+    data object OnDismiss : AddAction
 }
 
 sealed interface AddEvent {
     data class LaunchPicker(val max: Int) : AddEvent
-    /** k-reading: a pick is being added, or a pasted link was queued. */
-    data object OpenReading : AddEvent
+    /** k-reading: a pick is being added, or a pasted link was queued. [since] = the batch start (H63). */
+    data class OpenReading(val since: Long) : AddEvent
     /** Pasted a link that's already in Kept: open it (with an "Already in Kept" snackbar). */
     data class OpenSave(val id: Long) : AddEvent
     data object OpenHowTo : AddEvent
@@ -58,6 +60,7 @@ class AddViewModel(
     private val imports: PickedImports,
     private val clipboard: ClipboardLinks,
     private val snackbars: Snackbars,
+    private val clock: () -> Long = System::currentTimeMillis,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AddState())
@@ -73,24 +76,27 @@ class AddViewModel(
             is AddAction.OnPicked -> if (action.refs.isEmpty()) {
                 send(AddEvent.Close)
             } else {
+                val since = clock()
                 imports.start(action.refs)
-                send(AddEvent.OpenReading)
+                send(AddEvent.OpenReading(since))
             }
             AddAction.OnPasteLink -> if (_state.value.field == null) keep(clipboard.readText(), fromField = false)
             is AddAction.OnPasteTextChange -> _state.update { s -> s.copy(field = s.field?.copy(text = action.text, error = null)) }
             AddAction.OnAddPasted -> _state.value.field?.takeIf { it.canAdd }?.let { keep(it.text, fromField = true) }
             AddAction.OnShareFromApp -> send(AddEvent.OpenHowTo)
+            AddAction.OnDismiss -> send(AddEvent.Close)
         }
     }
 
     private fun keep(text: String?, fromField: Boolean) {
         if (_state.value.keeping) return
         _state.update { it.copy(keeping = true) }
+        val since = clock()
         viewModelScope.launch {
             when (val r = keeper.keepPastedLink(text)) {
                 is TextKept.Queued -> {
                     _state.update { it.copy(field = null) }
-                    _events.send(AddEvent.OpenReading)
+                    _events.send(AddEvent.OpenReading(since))
                 }
                 is TextKept.Duplicate -> {
                     _state.update { it.copy(field = null) }

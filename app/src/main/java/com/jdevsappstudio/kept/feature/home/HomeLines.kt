@@ -25,6 +25,16 @@ sealed interface HomeLine {
 
 object HomeLines {
 
+    /** Why saves wait, after 'N waiting · ' (home and k-reading). */
+    fun waitReason(pause: QueuePause): String = when (pause) {
+        QueuePause.NEEDS_CONSENT -> "turn on cloud help or tag by hand"
+        QueuePause.OFFLINE -> "read when you're back online"
+        QueuePause.IN_BACKGROUND -> "read when you open Kept"
+        QueuePause.CLOUD_CAP -> "today's cloud reads are used up"
+        QueuePause.NOT_SET_UP -> "reading isn't set up"
+        QueuePause.NONE -> "trying again soon"
+    }
+
     fun readsWith(route: ReadRoute?, cloudHelp: Boolean): ReadsWith = when (route) {
         ReadRoute.DEVICE -> ReadsWith.DEVICE
         ReadRoute.CLOUD, ReadRoute.OFFLINE -> ReadsWith.CLOUD

@@ -34,6 +34,11 @@ import androidx.navigation.compose.dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavOptionsBuilder
+import androidx.navigation.toRoute
+import com.jdevsappstudio.kept.feature.add.AddRoot
+import com.jdevsappstudio.kept.feature.add.HowToRoot
+import com.jdevsappstudio.kept.feature.add.ReadingRoot
 import com.jdevsappstudio.kept.core.designsystem.KeptIconButton
 import com.jdevsappstudio.kept.core.designsystem.VSpace
 import com.jdevsappstudio.kept.core.presentation.KeptSnackbarHost
@@ -77,7 +82,8 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
                     onOpenShelves = { nav.navigate(ShelvesRoute) },
                     onOpenCollection = { nav.navigate(CollectionRoute(it)) },
                     onNewCollection = { nav.navigate(CollectionNameRoute()) },
-                    onAdd = { nav.navigate(AddRoute) },
+                    onAdd = { nav.navigate(AddRoute()) },
+                    onPick = { nav.navigate(AddRoute(pick = true)) },
                     onSettings = { nav.navigate(SettingsRoute) },
                     onNeedLook = { nav.navigate(NeedLookRoute) },
                 )
@@ -133,7 +139,28 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
             composable<CloudOutRoute> { Stub("Out of cloud answers", nav) }
             composable<CollectionRoute> { Stub("Collection", nav) }
             composable<CollectionNameRoute> { Stub("New collection", nav) }
-            composable<AddRoute> { Stub("Add to Kept", nav) }
+            // k-addmenu: a sheet over Home, so a dialog destination; whatever it opens replaces it on the stack.
+            dialog<AddRoute>(
+                dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+            ) { entry ->
+                val replace: NavOptionsBuilder.() -> Unit = { popUpTo<AddRoute> { inclusive = true } }
+                AddRoot(
+                    pickNow = entry.toRoute<AddRoute>().pick,
+                    onClose = { nav.popBackStack() },
+                    onOpenReading = { nav.navigate(ReadingRoute(it), replace) },
+                    onOpenSave = { nav.navigate(SaveDetailRoute(it), replace) },
+                    onOpenHowTo = { nav.navigate(HowToRoute, replace) },
+                )
+            }
+            composable<ReadingRoute> {
+                ReadingRoot(
+                    onBack = { nav.popBackStack() },
+                    onOpenSave = { nav.navigate(SaveDetailRoute(it)) },
+                    onOpenEdit = { nav.navigate(EditSaveRoute(longArrayOf(it))) },
+                    onOpenNeedLook = { nav.navigate(NeedLookRoute) },
+                )
+            }
+            composable<HowToRoute> { HowToRoot(onBack = { nav.popBackStack() }) }
             composable<SettingsRoute> { Stub("Settings", nav) }
             composable<NeedLookRoute> { Stub("Needs a look", nav) }
         }
@@ -145,7 +172,7 @@ const val KEY_CREATED_COLLECTION = "createdCollection"
 
 private val BAR_ROUTES: List<KClass<*>> = listOf(
     HomeRoute::class, SearchRoute::class, AskRoute::class,
-    SaveListRoute::class, ShelfRoute::class, ShelvesRoute::class, CollectionRoute::class,
+    SaveListRoute::class, ShelfRoute::class, ShelvesRoute::class, CollectionRoute::class, ReadingRoute::class,
 )
 
 private fun NavDestination?.showsBar(): Boolean = this != null && BAR_ROUTES.any { hasRoute(it) }

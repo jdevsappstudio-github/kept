@@ -25,7 +25,11 @@ import kotlinx.serialization.Serializable
 @Serializable data class CollectionNameRoute(val renameCollectionId: Long? = null)
 
 // Capture, settings, states
-@Serializable data object AddRoute
+/** k-addmenu; [pick] = open the photo picker straight away (k-empty), no sheet. */
+@Serializable data class AddRoute(val pick: Boolean = false)
+/** k-reading: ReadingViewModel.ARG_SINCE = "since" (H63). */
+@Serializable data class ReadingRoute(val since: Long)
+@Serializable data object HowToRoute
 @Serializable data object SettingsRoute
 @Serializable data object NeedLookRoute
 @Serializable data object CloudOutRoute

@@ -35,6 +35,11 @@ abstract class LibraryDao {
     @Query("SELECT * FROM saves WHERE deletedAt IS NULL ORDER BY createdAt DESC LIMIT 1")
     abstract fun observeNewest(): Flow<SaveWithDetails?>
 
+    /** k-reading (H63): this batch = saves kept since the person tapped Pick or Paste, newest first. */
+    @Transaction
+    @Query("SELECT * FROM saves WHERE deletedAt IS NULL AND createdAt >= :since ORDER BY createdAt DESC, id DESC LIMIT :limit")
+    abstract fun observeSince(since: Long, limit: Int): Flow<List<SaveWithDetails>>
+
     @Transaction
     @Query("SELECT * FROM saves WHERE id = :id AND deletedAt IS NULL")
     abstract fun observeSave(id: Long): Flow<SaveWithDetails?>

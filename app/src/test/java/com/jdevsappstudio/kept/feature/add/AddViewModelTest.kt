@@ -39,7 +39,7 @@ class AddViewModelTest {
     private val clipboard = FakeClipboard()
     private val importScope = TestScope(UnconfinedTestDispatcher())
     private val imports = PickedImports(keeper, snackbars, importScope)
-    private val vm = AddViewModel(keeper, imports, clipboard, snackbars)
+    private val vm = AddViewModel(keeper, imports, clipboard, snackbars, clock = { NOW })
 
     @Test fun `opening only peeks the clipboard, never reads it`() = runTest {
         clipboard.peek = ClipPeek.LINK
@@ -54,7 +54,7 @@ class AddViewModelTest {
             vm.onAction(AddAction.OnPickScreenshots)
             assertThat(awaitItem()).isEqualTo(AddEvent.LaunchPicker(100))
             vm.onAction(AddAction.OnPicked(listOf("img:a", "img:b")))
-            assertThat(awaitItem()).isEqualTo(AddEvent.OpenReading)
+            assertThat(awaitItem()).isEqualTo(AddEvent.OpenReading(NOW))
             vm.onAction(AddAction.OnPicked(emptyList()))
             assertThat(awaitItem()).isEqualTo(AddEvent.Close)
         }
@@ -65,7 +65,7 @@ class AddViewModelTest {
         clipboard.text = "Check this https://www.instagram.com/reel/abc/"
         vm.events.test {
             vm.onAction(AddAction.OnPasteLink)
-            assertThat(awaitItem()).isEqualTo(AddEvent.OpenReading)
+            assertThat(awaitItem()).isEqualTo(AddEvent.OpenReading(NOW))
         }
         assertThat(store.saves.single().url).isEqualTo("https://www.instagram.com/reel/abc/")
         assertThat(vm.state.value.field).isNull()
@@ -82,7 +82,7 @@ class AddViewModelTest {
             vm.onAction(AddAction.OnPasteTextChange("youtube.com/watch?v=x"))
             assertThat(vm.state.value.field?.error).isNull()
             vm.onAction(AddAction.OnAddPasted)
-            assertThat(awaitItem()).isEqualTo(AddEvent.OpenReading)
+            assertThat(awaitItem()).isEqualTo(AddEvent.OpenReading(NOW))
         }
         assertThat(store.notes.size).isEqualTo(0)
         assertThat(vm.state.value.field).isNull()
@@ -100,3 +100,5 @@ class AddViewModelTest {
         assertThat(msg.text is UiText.Res).isTrue()
     }
 }
+
+private const val NOW = 1_700_000_000_000L

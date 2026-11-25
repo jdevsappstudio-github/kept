@@ -57,6 +57,8 @@ import com.jdevsappstudio.kept.data.capture.ImageCopier
 import com.jdevsappstudio.kept.data.capture.Keeper
 import com.jdevsappstudio.kept.data.capture.SaveFilesCopier
 import com.jdevsappstudio.kept.feature.add.AddViewModel
+import com.jdevsappstudio.kept.feature.add.HowToViewModel
+import com.jdevsappstudio.kept.feature.add.ReadingViewModel
 import com.jdevsappstudio.kept.feature.add.PickedImports
 import com.jdevsappstudio.kept.data.ads.InstantRewardedAds
 import com.jdevsappstudio.kept.data.ads.NoRewardedAds
@@ -135,6 +137,14 @@ val appModule = module {
             reads = get<CloudQuota>().observe(CloudMeter.READS),
         )
     }
+    viewModel {
+        val queue = get<ReadQueue>()
+        ReadingViewModel(
+            get(), get(), combine(get<SaveLocalDataSource>().observeCounts(), queue.route, queue.pause, ::QueueView),
+            get(), get<PickedImports>().progress, get(),
+        )
+    }
+    viewModel { HowToViewModel() }
     viewModel { SaveListViewModel(get(), get(), get(), get()) }
     viewModel { SearchViewModel(get(), get<SaveLocalDataSource>().observeCounts(), get(), get(), get(), get(), get()) }
     viewModel { ShelfViewModel(get(), get(), get()) }

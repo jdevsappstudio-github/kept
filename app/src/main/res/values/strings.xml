@@ -53,6 +53,7 @@
     <string name="notif_read_body">Tap to see them in Kept.</string>
     <!-- Library snackbars (H51 1b) -->
     <string name="snack_undo">Undo</string>
+    <string name="snack_edit">Edit</string>
     <plurals name="snack_deleted">
         <item quantity="one">Deleted</item>
         <item quantity="other">Deleted %1$d</item>

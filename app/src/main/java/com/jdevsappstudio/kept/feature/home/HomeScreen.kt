@@ -82,7 +82,6 @@ import com.jdevsappstudio.kept.core.model.SaveType
 import com.jdevsappstudio.kept.core.model.Shelf
 import com.jdevsappstudio.kept.core.model.TypeChip
 import com.jdevsappstudio.kept.core.presentation.ObserveAsEvents
-import com.jdevsappstudio.kept.data.queue.QueuePause
 import com.jdevsappstudio.kept.feature.add.AddDebug
 import com.jdevsappstudio.kept.feature.ask.AskDebug
 import com.jdevsappstudio.kept.feature.library.detail.FillDebug
@@ -100,6 +99,7 @@ fun HomeRoot(
     onOpenCollection: (Long) -> Unit,
     onNewCollection: () -> Unit,
     onAdd: () -> Unit,
+    onPick: () -> Unit,
     onSettings: () -> Unit,
     onNeedLook: () -> Unit,
     viewModel: HomeViewModel = koinViewModel(),
@@ -119,7 +119,8 @@ fun HomeRoot(
             HomeAction.OnSeeAllShelvesClick -> onOpenShelves()
             is HomeAction.OnCollectionClick -> onOpenCollection(action.id)
             HomeAction.OnNewCollectionClick -> onNewCollection()
-            HomeAction.OnAddClick, HomeAction.OnPickClick -> onAdd()
+            HomeAction.OnAddClick -> onAdd()
+            HomeAction.OnPickClick -> onPick()
             HomeAction.OnSettingsClick -> onSettings()
             HomeAction.OnNeedLookClick -> onNeedLook()
             else -> viewModel.onAction(action)
@@ -206,14 +207,7 @@ private fun StatusLines(lines: List<HomeLine>, onAction: (HomeAction) -> Unit) {
                     ReadsWith.CLOUD -> " · Gemini in the cloud"
                     ReadsWith.UNKNOWN -> ""
                 } to MaterialTheme.colorScheme.onSurfaceVariant
-                is HomeLine.Waiting -> "${line.count} waiting · " + when (line.pause) {
-                    QueuePause.NEEDS_CONSENT -> "turn on cloud help or tag by hand"
-                    QueuePause.OFFLINE -> "read when you're back online"
-                    QueuePause.IN_BACKGROUND -> "read when you open Kept"
-                    QueuePause.CLOUD_CAP -> "today's cloud reads are used up"
-                    QueuePause.NOT_SET_UP -> "reading isn't set up"
-                    QueuePause.NONE -> "trying again soon"
-                } to Kept.colors.wait
+                is HomeLine.Waiting -> "${line.count} waiting · ${HomeLines.waitReason(line.pause)}" to Kept.colors.wait
                 is HomeLine.NeedLook -> (if (line.count == 1) "1 needs a look" else "${line.count} need a look") to Kept.colors.wait
                 is HomeLine.ReadsLeft -> "${line.left} of ${line.total} cloud reads left today" to Kept.colors.cloud
             }

@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.Flow
 interface LibraryLocalDataSource {
     fun pagedSaves(filter: SaveFilter): Flow<PagingData<Save>>
     fun observeNewest(): Flow<Save?>
+    /** k-reading (H63): saves kept since [since], newest first, read or not (at most [limit]). */
+    fun observeSince(since: Long, limit: Int = 300): Flow<List<Save>>
     fun observeSave(id: Long): Flow<Save?>
     fun observeItems(saveId: Long): Flow<List<SaveItem>>
 
