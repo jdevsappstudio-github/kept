@@ -35,6 +35,9 @@ import com.jdevsappstudio.kept.core.designsystem.KeptIconButton
 import com.jdevsappstudio.kept.core.designsystem.VSpace
 import com.jdevsappstudio.kept.core.presentation.KeptSnackbarHost
 import com.jdevsappstudio.kept.feature.home.HomeRoot
+import com.jdevsappstudio.kept.feature.library.list.SaveListRoot
+import com.jdevsappstudio.kept.feature.library.shelf.ShelfRoot
+import com.jdevsappstudio.kept.feature.library.shelves.ShelvesRoot
 import kotlin.reflect.KClass
 
 /**
@@ -76,9 +79,24 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
             // Screens below are filled in by the next UI-sweep chunks (H51); until then each is a titled stub.
             composable<SearchRoute> { Stub("Search", nav, back = false) }
             composable<AskRoute> { Stub("Ask", nav, back = false) }
-            composable<SaveListRoute> { Stub("List", nav) }
-            composable<ShelfRoute> { Stub("Shelf", nav) }
-            composable<ShelvesRoute> { Stub("All shelves", nav) }
+            composable<SaveListRoute> {
+                SaveListRoot(
+                    onBack = { nav.popBackStack() },
+                    onSearch = { type -> nav.navigate(SearchRoute(type = type?.wire)) },
+                    onOpenSave = { nav.navigate(SaveDetailRoute(it)) },
+                    onOpenEdit = { nav.navigate(EditSaveRoute(it.toLongArray())) },
+                )
+            }
+            composable<ShelfRoute> {
+                ShelfRoot(
+                    onBack = { nav.popBackStack() },
+                    onSearch = { q -> nav.navigate(SearchRoute(q = q)) },
+                    onOpenSave = { nav.navigate(SaveDetailRoute(it)) },
+                )
+            }
+            composable<ShelvesRoute> {
+                ShelvesRoot(onBack = { nav.popBackStack() }, onOpenShelf = { nav.navigate(ShelfRoute(it)) })
+            }
             composable<SaveDetailRoute> { Stub("Save", nav) }
             composable<EditSaveRoute> { Stub("Edit", nav) }
             composable<CollectionRoute> { Stub("Collection", nav) }

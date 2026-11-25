@@ -101,13 +101,14 @@ abstract class LibraryDao {
      */
     @Query(
         "SELECT i.itemKey AS itemKey, i.name AS name, COUNT(DISTINCT i.saveId) AS saves, i.saveId AS saveId, " +
-            "s.sourceApp AS sourceApp, MAX(s.createdAt) AS newest " +
+            "s.sourceApp AS sourceApp, s.type AS type, COALESCE(NULLIF(s.link, ''), s.url) AS link, MAX(s.createdAt) AS newest " +
             "FROM save_items i JOIN shelf_saves v ON v.saveId = i.saveId JOIN saves s ON s.id = i.saveId " +
             "WHERE v.shelf = :shelf AND i.hidden = 0 AND i.itemKey != '' " +
             "AND (:tag IS NULL OR i.saveId IN (SELECT saveId FROM save_tags WHERE tag = :tag)) " +
             "GROUP BY i.itemKey " +
             "UNION ALL " +
-            "SELECT '' AS itemKey, s.title AS name, 1 AS saves, s.id AS saveId, s.sourceApp AS sourceApp, s.createdAt AS newest " +
+            "SELECT '' AS itemKey, s.title AS name, 1 AS saves, s.id AS saveId, s.sourceApp AS sourceApp, s.type AS type, " +
+            "COALESCE(NULLIF(s.link, ''), s.url) AS link, s.createdAt AS newest " +
             "FROM saves s JOIN shelf_saves v ON v.saveId = s.id " +
             "WHERE v.shelf = :shelf AND NOT EXISTS (SELECT 1 FROM save_items i WHERE i.saveId = s.id) " +
             "AND (:tag IS NULL OR s.id IN (SELECT saveId FROM save_tags WHERE tag = :tag)) " +
@@ -271,6 +272,9 @@ data class ShelfEntryRow(
     val saves: Int,
     val saveId: Long,
     val sourceApp: String?,
+    /** [com.jdevsappstudio.kept.core.model.SaveType.wire] of the save that holds it. */
+    val type: String,
+    val link: String?,
     val newest: Long,
 )
 

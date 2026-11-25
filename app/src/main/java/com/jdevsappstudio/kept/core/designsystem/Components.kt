@@ -45,6 +45,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -248,3 +251,29 @@ fun HSpace(w: Dp) = Spacer(Modifier.width(w))
 /** Cards: surface + soft shadow (B · Rich). */
 fun Modifier.card(color: Color, elevation: Dp = 2.dp): Modifier =
     shadow(elevation, CardShape, clip = false).clip(CardShape).background(color)
+
+/** App bar of the screens under Home: back, a serif title, then square actions (search, ⋮, grid). */
+@Composable
+fun KeptTopBar(
+    title: String,
+    onBack: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    backLabel: String = "Back",
+    actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {},
+) {
+    Row(modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (onBack != null) {
+            KeptIconButton(Icons.AutoMirrored.Outlined.ArrowBack, backLabel, onClick = onBack)
+            Spacer(Modifier.width(12.dp))
+        }
+        Text(
+            title,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).semantics { heading() },
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically, content = actions)
+    }
+}

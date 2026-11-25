@@ -91,7 +91,7 @@ class RoomLibraryDataSource(
 
     override fun observeShelfEntries(shelf: String, tag: String?): Flow<List<ShelfEntry>> =
         dao.observeShelfEntries(shelf, tag).map { rows ->
-            rows.map { ShelfEntry(it.itemKey, it.name, it.saves, it.saveId, it.sourceApp) }
+            rows.map { ShelfEntry(it.itemKey, it.name, it.saves, it.saveId, it.sourceApp, SaveType.fromWire(it.type), it.link) }
         }.distinctUntilChanged()
 
     // ---- Edit sheet ----
