@@ -23,6 +23,8 @@ firebaseAppCheck = "20.1.0"
 firebaseConfig = "24.0.1"
 junit5 = "5.11.4"
 assertk = "0.28.1"
+androidxTestRunner = "1.6.2"
+androidxTestExtJunit = "1.2.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -66,6 +68,9 @@ firebase-config = { group = "com.google.firebase", name = "firebase-config", ver
 junit-bom = { group = "org.junit", name = "junit-bom", version.ref = "junit5" }
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter" }
 junit-platform-launcher = { group = "org.junit.platform", name = "junit-platform-launcher" }
+androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
+androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }
+room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
 assertk = { group = "com.willowtreeapps.assertk", name = "assertk", version.ref = "assertk" }
 
 [plugins]

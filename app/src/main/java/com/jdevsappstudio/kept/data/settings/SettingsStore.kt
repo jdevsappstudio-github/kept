@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import com.jdevsappstudio.kept.core.model.ListLayout
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -38,6 +40,15 @@ class SettingsStore(private val context: Context) {
         }
     }
 
+    /** H50: rows (default) or grid, one choice for every save list. */
+    val listLayout: Flow<ListLayout> = context.settings.data
+        .map { p -> ListLayout.entries.firstOrNull { it.name == p[LIST_LAYOUT] } ?: ListLayout.ROWS }
+        .distinctUntilChanged()
+
+    suspend fun setListLayout(layout: ListLayout) {
+        context.settings.edit { it[LIST_LAYOUT] = layout.name }
+    }
+
     /** True only the first time: POST_NOTIFICATIONS is asked once, after the first share (BUILD-SPEC §4). */
     suspend fun claimNotificationAsk(): Boolean {
         var first = false
@@ -55,5 +66,6 @@ class SettingsStore(private val context: Context) {
         val CLOUD_HELP = booleanPreferencesKey("cloud_help")
         val READS_DAY = intPreferencesKey("cloud_reads_day")
         val READS_COUNT = intPreferencesKey("cloud_reads_count")
+        val LIST_LAYOUT = stringPreferencesKey("list_layout")
     }
 }

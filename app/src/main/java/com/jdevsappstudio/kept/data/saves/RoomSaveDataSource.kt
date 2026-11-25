@@ -4,6 +4,7 @@ import com.jdevsappstudio.kept.core.model.NewSave
 import com.jdevsappstudio.kept.core.model.QueueCounts
 import com.jdevsappstudio.kept.core.model.ReadBy
 import com.jdevsappstudio.kept.core.model.SaveStatus
+import com.jdevsappstudio.kept.core.model.SaveType
 import com.jdevsappstudio.kept.data.ai.CardDraft
 import com.jdevsappstudio.kept.data.ai.ReadFailure
 import com.jdevsappstudio.kept.data.db.CardRow
@@ -80,7 +81,7 @@ class RoomSaveDataSource(
         dao.applyCard(
             CardRow(
                 id = id, readBy = readBy.name, model = model, title = card.title.trim(), summary = card.summary.trim(),
-                type = card.type.trim().lowercase(), kind = CardMapping.kind(card), place = card.place.trim(),
+                type = SaveType.fromWire(card.type).wire, kind = CardMapping.kind(card), place = card.place.trim(),
                 eventDate = card.date.trim(), link = card.link.trim(), readAt = now,
             ),
             tags = tags,

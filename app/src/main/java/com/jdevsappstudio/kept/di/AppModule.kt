@@ -32,6 +32,8 @@ import java.io.File
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
+import com.jdevsappstudio.kept.data.library.LibraryLocalDataSource
+import com.jdevsappstudio.kept.data.library.RoomLibraryDataSource
 
 val IMAGE_DISPATCHER = named("image")
 val APP_SCOPE = named("appScope")
@@ -45,6 +47,8 @@ val appModule = module {
     single { KeptDatabase.build(androidContext()) }
     single { get<KeptDatabase>().saveDao() }
     single<SaveLocalDataSource> { RoomSaveDataSource(get(), get(IMAGE_DISPATCHER)) }
+    single { get<KeptDatabase>().libraryDao() }
+    single<LibraryLocalDataSource> { RoomLibraryDataSource(get(), get(), get()) }
     single { SaveFiles(androidContext(), get(IMAGE_DISPATCHER)) }
     single { SettingsStore(androidContext()) }
     single { NetworkStatus(androidContext()) }

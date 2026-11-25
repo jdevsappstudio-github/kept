@@ -14,6 +14,7 @@ import com.jdevsappstudio.kept.di.APP_SCOPE
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.koin.core.context.startKoin
+import com.jdevsappstudio.kept.data.library.LibraryLocalDataSource
 
 class KeptApplication : Application(), Configuration.Provider {
     // WorkManager starts lazily on first use (the manifest removes its startup initializer) with Koin's factory.
@@ -36,6 +37,8 @@ class KeptApplication : Application(), Configuration.Provider {
         koin.get<CoroutineScope>(APP_SCOPE).launch {
             if (BuildConfig.HAS_FIREBASE) AppCheckSetup.install()
             koin.get<ReadQueue>().start()
+            // Deletes whose Undo window has long passed (snackbar can't outlive the process).
+            koin.get<LibraryLocalDataSource>().purgeStale()
         }
     }
 }

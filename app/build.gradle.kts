@@ -36,6 +36,7 @@ android {
         versionCode = appVersionCode
         versionName = appVersionName
         buildConfigField("boolean", "HAS_FIREBASE", "$hasFirebaseConfig")
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
@@ -79,6 +80,9 @@ android {
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
+
+// MigrationTestHelper reads the exported schemas from the test APK's assets.
+android.sourceSets.getByName("androidTest").assets.srcDir("$projectDir/schemas")
 
 java {
     toolchain { languageVersion = JavaLanguageVersion.of(21) }
@@ -134,4 +138,11 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.assertk)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    // SQL tests on a real phone (install -r + am instrument; never connectedAndroidTest, it uninstalls the app).
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.room.testing)
+    androidTestImplementation(libs.assertk)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
 }

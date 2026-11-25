@@ -1,6 +1,7 @@
 package com.jdevsappstudio.kept.data.db
 
 import androidx.room.ColumnInfo
+import androidx.room.DatabaseView
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Fts4
@@ -45,6 +46,8 @@ data class SaveEntity(
     val link: String = "",
     val fullText: String = "",
     val readAt: Long? = null,
+    /** Soft delete (v2): set on Delete, cleared by Undo, the row and files go when the snackbar ends (or on next start). */
+    val deletedAt: Long? = null,
 )
 
 @Entity(
@@ -58,12 +61,16 @@ data class SaveTagEntity(val saveId: Long, val tag: String)
 @Entity(
     tableName = "save_items",
     foreignKeys = [ForeignKey(SaveEntity::class, ["id"], ["saveId"], onDelete = ForeignKey.CASCADE)],
-    indices = [Index("saveId")],
+    indices = [Index("saveId"), Index("itemKey")],
 )
 data class SaveItemEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val saveId: Long,
     val name: String,
+    /** [com.jdevsappstudio.kept.data.saves.ItemKey]: one movie from two saves is one shelf row (H52). */
+    @ColumnInfo(defaultValue = "") val itemKey: String = "",
+    /** "Not a movie": off its shelf, still listed on its save. */
+    @ColumnInfo(defaultValue = "0") val hidden: Boolean = false,
 )
 
 @Entity(tableName = "collections")
@@ -91,6 +98,27 @@ data class SearchFtsEntity(
     @PrimaryKey @ColumnInfo(name = "rowid") val rowid: Long,
     val body: String,
 )
+
+/** A shelf's own settings (H52). No row = defaults; shelves themselves come from kinds with 3+ saves. */
+@Entity(tableName = "shelves")
+data class ShelfEntity(
+    @PrimaryKey val kind: String,
+    /** Rename; null = the kind, capitalised. */
+    val name: String? = null,
+    val hidden: Boolean = false,
+    /** Drag order on k-shelves; null = after the ordered ones, biggest first. */
+    val position: Int? = null,
+    /** Merge into…: saves of this kind show on that shelf. */
+    val mergedInto: String? = null,
+)
+
+/** Which shelf each read, not-deleted save sits on (its kind, or the kind it was merged into). */
+@DatabaseView(
+    viewName = "shelf_saves",
+    value = "SELECT s.id AS saveId, COALESCE(m.mergedInto, s.kind) AS shelf FROM saves s " +
+        "LEFT JOIN shelves m ON m.kind = s.kind WHERE s.deletedAt IS NULL AND s.status = 'READ' AND s.kind != ''",
+)
+data class ShelfSaveView(val saveId: Long, val shelf: String)
 
 /** Row of the status count query. */
 data class StatusCount(val status: SaveStatus, val n: Int)

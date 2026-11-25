@@ -1,11 +1,11 @@
 package com.jdevsappstudio.kept.data.db
 
-import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
 import com.jdevsappstudio.kept.core.model.SaveStatus
+import com.jdevsappstudio.kept.data.saves.ItemKey
 import kotlinx.coroutines.flow.Flow
 
 /** All suspend / Flow / Paging: Room runs them on its own executors, never on the main thread (BUILD-SPEC §4). */
@@ -25,15 +25,12 @@ abstract class SaveDao {
     @Query("SELECT id FROM saves WHERE url = :url AND imagePath IS NULL LIMIT 1")
     abstract suspend fun findByUrl(url: String): Long?
 
-    @Query("SELECT * FROM saves ORDER BY createdAt DESC")
-    abstract fun pagingAll(): PagingSource<Int, SaveEntity>
-
-    @Query("SELECT status, COUNT(*) AS n FROM saves GROUP BY status")
+    @Query("SELECT status, COUNT(*) AS n FROM saves WHERE deletedAt IS NULL GROUP BY status")
     abstract fun observeStatusCounts(): Flow<List<StatusCount>>
 
     // ---- Read queue ----
 
-    @Query("SELECT * FROM saves WHERE status = 'QUEUED' AND nextAttemptAt <= :now ORDER BY createdAt LIMIT 1")
+    @Query("SELECT * FROM saves WHERE status = 'QUEUED' AND deletedAt IS NULL AND nextAttemptAt <= :now ORDER BY createdAt LIMIT 1")
     protected abstract suspend fun nextDue(now: Long): SaveEntity?
 
     @Query("UPDATE saves SET status = 'READING' WHERE id = :id AND status = 'QUEUED'")
@@ -47,7 +44,7 @@ abstract class SaveDao {
     }
 
     /** Earliest time a waiting row becomes due, or null if nothing is queued. */
-    @Query("SELECT MIN(nextAttemptAt) FROM saves WHERE status = 'QUEUED'")
+    @Query("SELECT MIN(nextAttemptAt) FROM saves WHERE status = 'QUEUED' AND deletedAt IS NULL")
     abstract suspend fun earliestDue(): Long?
 
     /** A read cut short (app left the screen, scope cancelled): back to the queue, no try counted. */
@@ -113,7 +110,7 @@ abstract class SaveDao {
         deleteTags(card.id)
         if (tags.isNotEmpty()) insertTags(tags.map { SaveTagEntity(card.id, it) })
         deleteItems(card.id)
-        if (items.isNotEmpty()) insertItems(items.map { SaveItemEntity(saveId = card.id, name = it) })
+        if (items.isNotEmpty()) insertItems(items.map { SaveItemEntity(saveId = card.id, name = it, itemKey = ItemKey.of(it)) })
         deleteFts(card.id)
         insertFts(SearchFtsEntity(card.id, searchBody))
     }
