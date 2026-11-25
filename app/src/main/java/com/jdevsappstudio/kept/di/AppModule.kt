@@ -51,6 +51,14 @@ import com.jdevsappstudio.kept.data.library.RoomCollectionsDataSource
 import com.jdevsappstudio.kept.feature.collections.CollectionNameViewModel
 import com.jdevsappstudio.kept.feature.collections.CollectionViewModel
 
+import com.jdevsappstudio.kept.data.capture.AndroidClipboard
+import com.jdevsappstudio.kept.data.capture.ClipboardLinks
+import com.jdevsappstudio.kept.data.capture.ImageCopier
+import com.jdevsappstudio.kept.data.capture.Keeper
+import com.jdevsappstudio.kept.data.capture.SaveFilesCopier
+import com.jdevsappstudio.kept.feature.add.AddViewModel
+import com.jdevsappstudio.kept.feature.add.PickedImports
+
 val IMAGE_DISPATCHER = named("image")
 val APP_SCOPE = named("appScope")
 
@@ -71,7 +79,10 @@ val appModule = module {
     single<SettingsStore> { DataStoreSettingsStore(androidContext()) }
     single { NetworkStatus(androidContext()) }
     single { ReadRouting(get(), get(), get()) }
-    viewModel { ShareViewModel(get(), get(), get(), get()) }
+    single<ImageCopier> { SaveFilesCopier(get()) }
+    single { Keeper(get(), get()) }
+    single<ClipboardLinks> { AndroidClipboard(androidContext()) }
+    viewModel { ShareViewModel(get(), get(), get()) }
     // App-scoped work (read queue). SupervisorJob: one failure never cancels the rest; the handler logs instead of crashing.
     single(APP_SCOPE) {
         CoroutineScope(SupervisorJob() + Dispatchers.Default + CoroutineExceptionHandler { _, e -> Log.e("Kept", "app scope", e) })
@@ -81,6 +92,8 @@ val appModule = module {
     single { ReadQueue(get(), get(), get(), get(), get(), get(), get(), get(APP_SCOPE)) }
     worker { params -> CloudReadWorker(androidContext(), params.get(), get(), get(), get()) }
     single { Snackbars(get(APP_SCOPE)) }
+    single { PickedImports(get(), get(), get(APP_SCOPE)) }
+    viewModel { AddViewModel(get(), get(), get(), get()) }
     viewModel {
         val queue = get<ReadQueue>()
         HomeViewModel(combine(get<SaveLocalDataSource>().observeCounts(), queue.route, queue.pause, ::QueueView), get(), get(), get(), get())

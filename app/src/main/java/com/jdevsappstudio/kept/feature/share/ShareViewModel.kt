@@ -2,14 +2,13 @@ package com.jdevsappstudio.kept.feature.share
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jdevsappstudio.kept.core.model.NewSave
+import android.net.Uri
 import com.jdevsappstudio.kept.core.model.SaveSource
-import com.jdevsappstudio.kept.data.files.CopyResult
-import com.jdevsappstudio.kept.data.files.SaveFiles
+import com.jdevsappstudio.kept.data.capture.Keeper
+import com.jdevsappstudio.kept.data.capture.TextKept
 import com.jdevsappstudio.kept.data.queue.ReadRoute
 import com.jdevsappstudio.kept.data.queue.ReadRouting
 import com.jdevsappstudio.kept.data.settings.SettingsStore
-import com.jdevsappstudio.kept.data.saves.SaveLocalDataSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
@@ -54,12 +53,10 @@ sealed interface ShareEvent {
 }
 
 /**
- * Keeps a share: copy raw bytes (image dispatcher), skip duplicates, insert QUEUED rows. The read queue sees the new rows
- * through Room and starts on its own. Lives in viewModelScope, so a rotation never cuts a copy short.
+ * Keeps a share through [Keeper] (copy, dedupe, QUEUED rows). Lives in viewModelScope, so a rotation never cuts a copy short.
  */
 class ShareViewModel(
-    private val store: SaveLocalDataSource,
-    private val files: SaveFiles,
+    private val keeper: Keeper,
     private val routing: ReadRouting,
     private val settings: SettingsStore,
 ) : ViewModel() {
@@ -104,79 +101,35 @@ class ShareViewModel(
     }
 
     private suspend fun keepText(payload: SharePayload) {
-        val text = payload.text?.trim().orEmpty()
-        if (text.isEmpty()) {
-            _state.update { it.copy(phase = SharePhase.FAILED) }
-            return
+        val next = when (val r = keeper.keepSharedText(payload.text, payload.sourceApp)) {
+            is TextKept.Queued -> ShareState(phase = SharePhase.KEPT, kept = 1, saveId = r.id)
+            is TextKept.Duplicate -> ShareState(phase = SharePhase.ALREADY_KEPT, duplicates = 1, saveId = r.id)
+            is TextKept.Note -> ShareState(phase = SharePhase.KEPT_AS_NOTE, noteReason = NoteReason.PLAIN_TEXT, saveId = r.id)
+            TextKept.Empty, TextKept.NotALink -> ShareState(phase = SharePhase.FAILED)
         }
-        val url = ShareText.firstUrl(text)
-        val save = NewSave(SaveSource.SHARE_TEXT, payload.sourceApp, text, url, imagePath = null)
-        if (url == null) {
-            val id = store.addNote(save, ShareText.noteTitle(text))
-            _state.update { it.copy(phase = SharePhase.KEPT_AS_NOTE, noteReason = NoteReason.PLAIN_TEXT, saveId = id) }
-            return
-        }
-        val dup = store.findDuplicate(contentHash = null, url = url)
-        if (dup != null) {
-            _state.update { it.copy(phase = SharePhase.ALREADY_KEPT, saveId = dup, duplicates = 1) }
-        } else {
-            val id = store.add(listOf(save)).first()
-            _state.update { it.copy(phase = SharePhase.KEPT, kept = 1, saveId = id) }
-        }
+        _state.update { next.copy(route = it.route) }
     }
 
     private suspend fun keepImages(payload: SharePayload) {
-        val uris = payload.images.distinct()
-        val batch = uris.take(MAX_PER_SHARE)
-        _state.update { it.copy(total = batch.size, overCap = uris.size - batch.size) }
-        val url = ShareText.firstUrl(payload.text)
-        val fresh = mutableListOf<NewSave>()
-        val seen = HashSet<String>()
-        var firstDup: Long? = null
-        var duplicates = 0
-        var tooBig = 0
-        var unreadable = 0
-        batch.forEachIndexed { i, uri ->
-            when (val copy = files.copyIn(uri)) {
-                is CopyResult.Copied -> {
-                    val dup = if (copy.sha256 in seen) -1L else store.findDuplicate(copy.sha256, url = null)
-                    if (dup != null) {
-                        files.delete(copy.path)
-                        duplicates++
-                        if (firstDup == null && dup > 0) firstDup = dup
-                    } else {
-                        seen += copy.sha256
-                        fresh += NewSave(SaveSource.SHARE_IMAGE, payload.sourceApp, payload.text, url, copy.path, copy.sha256)
-                    }
-                }
-                CopyResult.TooBig -> tooBig++
-                CopyResult.Failed -> unreadable++
-            }
-            _state.update { it.copy(done = i + 1) }
-        }
-        val ids = if (fresh.isEmpty()) emptyList() else store.add(fresh)
-        var noteId: Long? = null
-        repeat(tooBig) {
-            noteId = store.addNote(
-                NewSave(SaveSource.SHARE_IMAGE, payload.sourceApp, payload.text, url, imagePath = null),
-                title = payload.text?.let(ShareText::noteTitle)?.takeIf { it.isNotEmpty() } ?: "Image (too big to read)",
-            )
+        val r = keeper.keepImages(payload.images.map(Uri::toString), SaveSource.SHARE_IMAGE, payload.sourceApp, payload.text) { done, total ->
+            _state.update { it.copy(done = done, total = total) }
         }
         _state.update {
+            val s = it.copy(overCap = r.overCap)
             when {
-                ids.isNotEmpty() -> it.copy(
-                    phase = SharePhase.KEPT, kept = ids.size + tooBig, duplicates = duplicates,
-                    unreadable = unreadable, saveId = ids.first(),
+                r.ids.isNotEmpty() -> s.copy(
+                    phase = SharePhase.KEPT, kept = r.kept, duplicates = r.duplicates,
+                    unreadable = r.unreadable, saveId = r.ids.first(),
                 )
-                duplicates > 0 -> it.copy(phase = SharePhase.ALREADY_KEPT, duplicates = duplicates, saveId = firstDup)
-                noteId != null -> it.copy(phase = SharePhase.KEPT_AS_NOTE, noteReason = NoteReason.TOO_BIG, saveId = noteId)
-                else -> it.copy(phase = SharePhase.FAILED, unreadable = unreadable)
+                r.duplicates > 0 -> s.copy(phase = SharePhase.ALREADY_KEPT, duplicates = r.duplicates, saveId = r.firstDuplicate)
+                r.noteIds.isNotEmpty() -> s.copy(phase = SharePhase.KEPT_AS_NOTE, noteReason = NoteReason.TOO_BIG, saveId = r.noteIds.last())
+                else -> s.copy(phase = SharePhase.FAILED, unreadable = r.unreadable)
             }
         }
     }
 
     companion object {
         /** Same cap as the photo picker (H45). */
-        const val MAX_PER_SHARE = 100
+        const val MAX_PER_SHARE = Keeper.MAX_PER_BATCH
     }
 }

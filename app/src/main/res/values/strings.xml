@@ -76,4 +76,21 @@
     </plurals>
     <string name="snack_removed_from">Removed from %1$s</string>
     <string name="snack_nothing_added">Already in %1$s</string>
+    <!-- + sheet: photo picker + Paste a link (H56) -->
+    <plurals name="add_dupes">
+        <item quantity="one">%1$d was already in Kept</item>
+        <item quantity="other">%1$d were already in Kept</item>
+    </plurals>
+    <plurals name="add_all_dupes">
+        <item quantity="one">That one was already in Kept</item>
+        <item quantity="other">All %1$d were already in Kept</item>
+    </plurals>
+    <plurals name="add_unreadable">
+        <item quantity="one">%1$d couldn\'t be opened</item>
+        <item quantity="other">%1$d couldn\'t be opened</item>
+    </plurals>
+    <string name="add_over_cap">Only the first %1$d were added</string>
+    <string name="add_failed">Couldn\'t add those screenshots. Try again.</string>
+    <string name="add_already_kept">Already in Kept</string>
+    <string name="add_not_a_link">That doesn\'t look like a link</string>
 </resources>
