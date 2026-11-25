@@ -124,6 +124,7 @@ dependencies {
     implementation(libs.firebase.ai.ondevice)
     ksp(libs.firebase.ai.ksp) // @Generable card schema: structured output on device
     implementation(libs.firebase.appcheck.playintegrity)
+    implementation(libs.firebase.config) // read model + effort, swappable without a release
     debugImplementation(libs.firebase.appcheck.debug)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
