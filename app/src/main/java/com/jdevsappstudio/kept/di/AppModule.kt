@@ -46,6 +46,10 @@ import com.jdevsappstudio.kept.data.library.RoomLibraryDataSource
 import com.jdevsappstudio.kept.data.search.RoomSearchDataSource
 import com.jdevsappstudio.kept.data.search.SearchLocalDataSource
 import com.jdevsappstudio.kept.feature.search.SearchViewModel
+import com.jdevsappstudio.kept.data.library.CollectionsLocalDataSource
+import com.jdevsappstudio.kept.data.library.RoomCollectionsDataSource
+import com.jdevsappstudio.kept.feature.collections.CollectionNameViewModel
+import com.jdevsappstudio.kept.feature.collections.CollectionViewModel
 
 val IMAGE_DISPATCHER = named("image")
 val APP_SCOPE = named("appScope")
@@ -61,6 +65,7 @@ val appModule = module {
     single<SaveLocalDataSource> { RoomSaveDataSource(get(), get(IMAGE_DISPATCHER)) }
     single { get<KeptDatabase>().libraryDao() }
     single<LibraryLocalDataSource> { RoomLibraryDataSource(get(), get(), get()) }
+    single<CollectionsLocalDataSource> { RoomCollectionsDataSource(get(), get<KeptDatabase>().collectionDao()) }
     single<SearchLocalDataSource> { RoomSearchDataSource(get<KeptDatabase>().searchDao()) }
     single { SaveFiles(androidContext(), get(IMAGE_DISPATCHER)) }
     single<SettingsStore> { DataStoreSettingsStore(androidContext()) }
@@ -78,13 +83,15 @@ val appModule = module {
     single { Snackbars(get(APP_SCOPE)) }
     viewModel {
         val queue = get<ReadQueue>()
-        HomeViewModel(combine(get<SaveLocalDataSource>().observeCounts(), queue.route, queue.pause, ::QueueView), get(), get(), get())
+        HomeViewModel(combine(get<SaveLocalDataSource>().observeCounts(), queue.route, queue.pause, ::QueueView), get(), get(), get(), get())
     }
     viewModel { SaveListViewModel(get(), get(), get(), get()) }
-    viewModel { SearchViewModel(get(), get<SaveLocalDataSource>().observeCounts(), get(), get(), get()) }
+    viewModel { SearchViewModel(get(), get<SaveLocalDataSource>().observeCounts(), get(), get(), get(), get(), get()) }
     viewModel { ShelfViewModel(get(), get(), get()) }
     viewModel { ShelvesViewModel(get()) }
     viewModel { SaveDetailViewModel(get(), get(), get()) }
-    viewModel { EditSaveViewModel(get(), get(), get()) }
+    viewModel { EditSaveViewModel(get(), get(), get(), get()) }
+    viewModel { CollectionViewModel(get(), get(), get(), get(), get()) }
+    viewModel { CollectionNameViewModel(get(), get()) }
     viewModel { ReaderSpikeViewModel(get(), get()) { File(androidContext().filesDir, "spike") } }
 }

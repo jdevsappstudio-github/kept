@@ -65,4 +65,15 @@
     <string name="snack_read_busy">It’s being read right now</string>
     <string name="snack_already_on_shelf">Already on your %1$s shelf</string>
     <string name="snack_already_here">Already on this save</string>
+    <!-- Collections (H55) -->
+    <plurals name="snack_made_collection">
+        <item quantity="one">Made %1$s · %2$d save</item>
+        <item quantity="other">Made %1$s · %2$d saves</item>
+    </plurals>
+    <plurals name="snack_added">
+        <item quantity="one">Added %1$d</item>
+        <item quantity="other">Added %1$d</item>
+    </plurals>
+    <string name="snack_removed_from">Removed from %1$s</string>
+    <string name="snack_nothing_added">Already in %1$s</string>
 </resources>

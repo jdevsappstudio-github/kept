@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.jdevsappstudio.kept.core.model.ListLayout
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -35,6 +36,10 @@ interface SettingsStore {
     /** k-search empty state: the last [RECENT_SEARCHES] searches, newest first (H54: kept on tap or Enter). */
     val recentSearches: Flow<List<String>>
     suspend fun addRecentSearch(text: String)
+
+    /** H26 / H55: tags whose collection suggestion got Not now; never suggested again. */
+    val dismissedSuggestions: Flow<Set<String>>
+    suspend fun dismissSuggestion(tag: String)
 
     companion object {
         const val RECENT_SEARCHES = 5
@@ -102,7 +107,16 @@ class DataStoreSettingsStore(private val context: Context) : SettingsStore {
         }
     }
 
+    override val dismissedSuggestions: Flow<Set<String>> = context.settings.data
+        .map { it[DISMISSED].orEmpty() }
+        .distinctUntilChanged()
+
+    override suspend fun dismissSuggestion(tag: String) {
+        context.settings.edit { it[DISMISSED] = it[DISMISSED].orEmpty() + tag }
+    }
+
     private companion object {
+        val DISMISSED = stringSetPreferencesKey("dismissed_suggestions")
         val RECENT = stringPreferencesKey("recent_searches")
         /** Searches are trimmed to single spaces, so a newline never occurs inside one. */
         const val RECENT_SEP = "\n"

@@ -11,7 +11,13 @@ import com.jdevsappstudio.kept.core.model.Save
 import com.jdevsappstudio.kept.core.model.SaveType
 import com.jdevsappstudio.kept.core.model.Shelf
 import com.jdevsappstudio.kept.core.model.TypeChip
+import com.jdevsappstudio.kept.core.model.CollectionSuggestion
+import com.jdevsappstudio.kept.core.model.SaveCollection
+import com.jdevsappstudio.kept.data.library.CollectionSuggestions
+import com.jdevsappstudio.kept.data.library.CollectionsLocalDataSource
 import com.jdevsappstudio.kept.data.library.LibraryLocalDataSource
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 import com.jdevsappstudio.kept.data.library.ShelfOrder
 import com.jdevsappstudio.kept.data.queue.QueuePause
 import com.jdevsappstudio.kept.data.queue.ReadRoute
@@ -39,6 +45,10 @@ data class HomeState(
     val shelves: List<Shelf> = emptyList(),
     /** "See all 6" counts every shelf, hidden ones too. */
     val allShelves: Int = 0,
+    /** H55: every collection, newest made first ('New collection' tile drawn after them). */
+    val collections: List<SaveCollection> = emptyList(),
+    /** "4 saves mention Pune" card, at most one (H55). */
+    val suggestion: CollectionSuggestion? = null,
 ) {
     /** Header "84 saves" = the sum of the chips (k-home note). */
     val total: Int get() = chips.sumOf { it.count }
@@ -52,8 +62,18 @@ sealed interface HomeAction {
     data class OnSaveClick(val id: Long) : HomeAction
     data class OnShelfClick(val kind: String) : HomeAction
     data object OnSeeAllShelvesClick : HomeAction
+    data class OnCollectionClick(val id: Long) : HomeAction
+    data object OnNewCollectionClick : HomeAction
+    /** Make it: collection made with those saves, snackbar 'Made Pune · 4 saves · Undo', then k-collection. */
+    data object OnMakeSuggestion : HomeAction
+    /** Not now: that tag is never suggested again. */
+    data object OnDismissSuggestion : HomeAction
     /** Debug panel only: checks delete + the app-wide Undo snackbar on a real library. */
     data object DebugDeleteHero : HomeAction
+}
+
+sealed interface HomeEvent {
+    data class OpenCollection(val id: Long) : HomeEvent
 }
 
 /** The queue's live state, as home needs it (ReadQueue in the app, a fake in tests). */
@@ -64,23 +84,38 @@ class HomeViewModel(
     queue: Flow<QueueView>,
     private val settings: SettingsStore,
     private val library: LibraryLocalDataSource,
+    private val collections: CollectionsLocalDataSource,
     private val snackbars: Snackbars,
     /** Onboarding B1 picks; wired when onboarding lands. */
     preferredTypes: Flow<List<SaveType>> = flowOf(emptyList()),
 ) : ViewModel() {
+
+    private val organised: Flow<Organised> = combine(
+        library.observeShelves(),
+        collections.observeCollections(),
+        collections.observeSuggestibleTags(),
+        settings.dismissedSuggestions,
+    ) { shelves, all, tags, dismissed ->
+        Organised(shelves, all, CollectionSuggestions.pick(tags, shelves, all, dismissed))
+    }
 
     val state: StateFlow<HomeState> = combine(
         queue,
         settings.cloudHelp,
         preferredTypes.flatMapLatest { library.observeTypeChips(it) },
         library.observeNewest(),
-        library.observeShelves(),
-    ) { q, cloudHelp, chips, hero, shelves ->
+        organised,
+    ) { q, cloudHelp, chips, hero, o ->
         HomeState(
             counts = q.counts, route = q.route, pause = q.pause, cloudHelp = cloudHelp,
-            chips = chips, hero = hero, shelves = ShelfOrder.onHome(shelves), allShelves = shelves.size,
+            chips = chips, hero = hero, shelves = ShelfOrder.onHome(o.shelves), allShelves = o.shelves.size,
+            collections = o.collections, suggestion = o.suggestion,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeState())
+
+    private val _events = Channel<HomeEvent>(Channel.BUFFERED)
+    val events = _events.receiveAsFlow()
+    private var making = false
 
     init {
         // Home open: saves deleted over a minute ago go for good (start-up does the same).
@@ -100,7 +135,30 @@ class HomeViewModel(
                     )
                 }
             }
+            HomeAction.OnMakeSuggestion -> makeSuggestion()
+            HomeAction.OnDismissSuggestion -> {
+                val tag = state.value.suggestion?.tag ?: return
+                viewModelScope.launch { settings.dismissSuggestion(tag) }
+            }
             else -> Unit
         }
     }
+
+    private fun makeSuggestion() {
+        val tag = state.value.suggestion?.tag ?: return
+        if (making) return
+        making = true
+        viewModelScope.launch {
+            val made = collections.makeFromTag(tag)
+            making = false
+            if (made == null) return@launch
+            snackbars.show(
+                UiText.Plural(R.plurals.snack_made_collection, made.saves, made.name, made.saves),
+                SnackbarAction(UiText.Res(R.string.snack_undo)) { collections.delete(made.id) },
+            )
+            _events.send(HomeEvent.OpenCollection(made.id))
+        }
+    }
 }
+
+private data class Organised(val shelves: List<Shelf>, val collections: List<SaveCollection>, val suggestion: CollectionSuggestion?)

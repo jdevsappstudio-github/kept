@@ -23,9 +23,12 @@ abstract class LibraryDao {
         "SELECT * FROM saves WHERE deletedAt IS NULL $SCOPE " +
             "AND (:tag IS NULL OR id IN (SELECT saveId FROM save_tags WHERE tag = :tag)) " +
             "AND (:shots IS NULL OR (imagePath IS NOT NULL) = :shots) " +
+            "AND (:collection IS NULL OR id IN (SELECT saveId FROM collection_saves WHERE collectionId = :collection)) " +
             "ORDER BY createdAt DESC",
     )
-    abstract fun paging(type: String?, shelf: String?, tag: String?, shots: Boolean?): PagingSource<Int, SaveWithDetails>
+    abstract fun paging(
+        type: String?, shelf: String?, tag: String?, shots: Boolean?, collection: Long?,
+    ): PagingSource<Int, SaveWithDetails>
 
     /** "Just kept" hero: the newest save, read or not. */
     @Transaction

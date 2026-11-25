@@ -14,6 +14,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.jdevsappstudio.kept.data.library.CollectionsLocalDataSource
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -90,4 +94,40 @@ private fun LibraryDebug(state: HomeState, onAction: (HomeAction) -> Unit) {
         style = style,
     )
     TextButton(onClick = { onAction(HomeAction.DebugDeleteHero) }, enabled = state.hero != null) { Text("Delete newest (Undo)") }
+    CollectionsDebug(state, onAction)
+}
+
+/** Debug only (H51 step 3): collections + the suggestion card as home sees them; buttons hit the real data source. */
+@Composable
+private fun CollectionsDebug(
+    state: HomeState,
+    onAction: (HomeAction) -> Unit,
+    collections: CollectionsLocalDataSource = koinInject(),
+) {
+    val style = MaterialTheme.typography.bodySmall
+    val scope = rememberCoroutineScope()
+    val first = state.collections.firstOrNull()
+    Text(
+        "Collections: " + state.collections.joinToString(" · ") { "${it.name} ${it.saves}" }.ifEmpty { "none" },
+        style = style,
+    )
+    state.suggestion?.let { s ->
+        Text("Suggestion: ${s.saves} saves mention ${s.name}", style = style)
+        Row {
+            TextButton(onClick = { onAction(HomeAction.OnMakeSuggestion) }) { Text("Make it") }
+            TextButton(onClick = { onAction(HomeAction.OnDismissSuggestion) }) { Text("Not now") }
+        }
+    } ?: Text("Suggestion: none", style = style)
+    Row {
+        TextButton(onClick = { scope.launch { collections.create("Test ${state.collections.size + 1}") } }) { Text("New") }
+        TextButton(
+            onClick = { scope.launch { collections.addSaves(first!!.id, listOfNotNull(state.hero?.id)) } },
+            enabled = first != null && state.hero != null,
+        ) { Text("Add newest") }
+        TextButton(
+            onClick = { scope.launch { collections.removeSaves(first!!.id, listOfNotNull(state.hero?.id)) } },
+            enabled = first != null && state.hero != null,
+        ) { Text("Remove") }
+        TextButton(onClick = { scope.launch { collections.delete(first!!.id) } }, enabled = first != null) { Text("Delete") }
+    }
 }

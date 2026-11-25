@@ -11,6 +11,10 @@ import assertk.assertions.isFalse
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
+import com.jdevsappstudio.kept.R
+import com.jdevsappstudio.kept.core.model.SaveFilter
+import com.jdevsappstudio.kept.feature.library.next
+import com.jdevsappstudio.kept.feature.library.resId
 import com.jdevsappstudio.kept.core.model.QueueCounts
 import com.jdevsappstudio.kept.core.model.SaveType
 import com.jdevsappstudio.kept.core.model.SearchHit
@@ -19,7 +23,9 @@ import com.jdevsappstudio.kept.core.model.TypeChip
 import com.jdevsappstudio.kept.data.search.SearchLocalDataSource
 import com.jdevsappstudio.kept.data.search.SearchQuery
 import com.jdevsappstudio.kept.feature.library.FakeLibrary
+import com.jdevsappstudio.kept.feature.library.FakeCollections
 import com.jdevsappstudio.kept.feature.library.FakeSettings
+import com.jdevsappstudio.kept.feature.library.testSnackbars
 import com.jdevsappstudio.kept.feature.library.MainDispatcherExtension
 import com.jdevsappstudio.kept.feature.library.keepActive
 import com.jdevsappstudio.kept.feature.library.shelf
@@ -52,10 +58,12 @@ class SearchViewModelTest {
     private val search = FakeSearch()
     private val library = FakeLibrary()
     private val settings = FakeSettings()
+    private val collections = FakeCollections()
+    private val snackbars = testSnackbars()
     private val queue = MutableStateFlow(QueueCounts.EMPTY)
 
     private fun TestScope.vm(args: Map<String, Any?> = emptyMap()) =
-        SearchViewModel(SavedStateHandle(args), queue, search, library, settings).also {
+        SearchViewModel(SavedStateHandle(args), queue, search, library, settings, collections, snackbars).also {
             keepActive(it.hits)
             keepActive(it.state)
         }
@@ -203,7 +211,7 @@ class SearchViewModelTest {
     @Test
     fun `the query survives process death`() = runTest {
         val handle = SavedStateHandle()
-        val first = SearchViewModel(handle, queue, search, library, settings)
+        val first = SearchViewModel(handle, queue, search, library, settings, collections, snackbars)
         first.onAction(SearchAction.OnQueryChange("goa"))
         first.onAction(SearchAction.OnTypeClick(SaveType.PLACE))
 
@@ -212,5 +220,45 @@ class SearchViewModelTest {
         advanceTimeBy(SearchViewModel.DEBOUNCE_MS + 1)
         runCurrent()
         assertThat(search.hitQueries.last()).isEqualTo("goa*" to SaveType.PLACE)
+    }
+
+    // ---- Pick mode (H55) ----
+
+    @Test
+    fun `pick mode - empty query lists every save, taps tick, already-in is locked, Add adds and goes back`() = runTest {
+        collections.collection(5, "Goa trip", setOf(1))
+        val vm = vm(mapOf(SearchViewModel.ARG_PICK_INTO to 5L))
+        assertThat(vm.state.value.showsList).isTrue()
+        assertThat(vm.state.value.pick?.collectionName).isEqualTo("Goa trip")
+        assertThat(library.pagedFilters).containsExactly(SaveFilter.ALL)
+        assertThat(search.hitQueries).isEmpty()
+
+        vm.onAction(SearchAction.OnHitClick(1)) // already in: locked
+        vm.onAction(SearchAction.OnHitClick(2))
+        vm.onAction(SearchAction.OnHitClick(3))
+        vm.onAction(SearchAction.OnHitClick(3))
+        val pick = vm.state.value.pick!!
+        assertThat(pick.picked).isEqualTo(setOf(2L))
+        assertThat(pick.isTicked(1) && pick.isLocked(1)).isTrue()
+        vm.events.test {
+            vm.onAction(SearchAction.OnPickAdd)
+            assertThat(awaitItem()).isEqualTo(SearchEvent.PickDone)
+        }
+        assertThat(collections.log).containsExactly("add 5 [2]")
+        assertThat(snackbars.next().text.resId()).isEqualTo(R.plurals.snack_added)
+    }
+
+    @Test
+    fun `pick mode - typing searches, but no shelf block, no Ask, nothing kept in recent`() = runTest {
+        collections.collection(5, "Goa trip")
+        library.shelves.value = listOf(shelf("movies"))
+        search.chips.value = mapOf("movie*" to listOf(TypeChip(SaveType.MOVIE_SHOW, 3)))
+        val vm = vm(mapOf(SearchViewModel.ARG_PICK_INTO to 5L))
+        type(vm, "movies")
+        assertThat(search.hitQueries.last().first).isEqualTo("movie*")
+        assertThat(vm.state.value.shelf).isNull()
+        assertThat(vm.state.value.canAsk).isFalse()
+        vm.onAction(SearchAction.OnSubmit)
+        assertThat(settings.recentSearches.value).isEmpty()
     }
 }

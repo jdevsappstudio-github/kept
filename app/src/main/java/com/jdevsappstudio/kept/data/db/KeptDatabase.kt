@@ -23,6 +23,7 @@ abstract class KeptDatabase : RoomDatabase() {
     abstract fun saveDao(): SaveDao
     abstract fun libraryDao(): LibraryDao
     abstract fun searchDao(): SearchDao
+    abstract fun collectionDao(): CollectionDao
 
     /** v2: soft delete, item keys + hidden, shelves. Backfills keys (close enough to ItemKey) and folds unknown types into other. */
     class V1ToV2 : AutoMigrationSpec {

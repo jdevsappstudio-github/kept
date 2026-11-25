@@ -45,6 +45,7 @@ class RoomLibraryDataSource(
                 shelf = filter.shelf,
                 tag = filter.tag,
                 shots = filter.source?.let { it == SourceFilter.SCREENSHOTS },
+                collection = filter.collection,
             )
         }.flow.map { page -> page.map { it.toSave() } }
 

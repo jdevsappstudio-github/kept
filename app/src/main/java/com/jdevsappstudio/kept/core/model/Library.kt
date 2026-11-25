@@ -1,11 +1,13 @@
 package com.jdevsappstudio.kept.core.model
 
-/** Which saves a list shows (k-list, k-shelf for save shelves, H51 step 1). Null = no narrowing. */
+/** Which saves a list shows (k-list, k-shelf for save shelves, k-collection). Null = no narrowing. */
 data class SaveFilter(
     val type: SaveType? = null,
     val shelf: String? = null,
     val tag: String? = null,
     val source: SourceFilter? = null,
+    /** k-collection: only the saves in this collection. */
+    val collection: Long? = null,
 ) {
     companion object {
         val ALL = SaveFilter()

@@ -234,7 +234,7 @@ class LibraryDataSourceTest {
             .containsExactly("dinner" to 2, "breakfast" to 1, "goa" to 1)
 
         suspend fun titles(f: SaveFilter): List<String> {
-            val page = db.libraryDao().paging(f.type?.wire, f.shelf, f.tag, f.source?.let { it == SourceFilter.SCREENSHOTS })
+            val page = db.libraryDao().paging(f.type?.wire, f.shelf, f.tag, f.source?.let { it == SourceFilter.SCREENSHOTS }, f.collection)
                 .load(PagingSource.LoadParams.Refresh(null, 40, false)) as PagingSource.LoadResult.Page
             return page.data.map { it.save.title }
         }

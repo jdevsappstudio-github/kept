@@ -22,9 +22,11 @@ import org.junit.jupiter.api.extension.ExtendWith
 class HomeAndShelvesViewModelTest {
     private val library = FakeLibrary()
     private val settings = FakeSettings()
+    private val collections = FakeCollections()
+    private val snackbars = testSnackbars()
 
     private fun home() = HomeViewModel(
-        flowOf(QueueView(QueueCounts(1, 0, 0, 9), null, QueuePause.NONE)), settings, library, testSnackbars(),
+        flowOf(QueueView(QueueCounts(1, 0, 0, 9), null, QueuePause.NONE)), settings, library, collections, snackbars,
     )
 
     @Test

@@ -17,6 +17,10 @@ import com.jdevsappstudio.kept.core.model.ShelfRemoval
 import com.jdevsappstudio.kept.core.model.SourceCounts
 import com.jdevsappstudio.kept.core.model.TagCount
 import com.jdevsappstudio.kept.core.model.TypeChip
+import com.jdevsappstudio.kept.core.model.MadeCollection
+import com.jdevsappstudio.kept.core.model.SaveCollection
+import com.jdevsappstudio.kept.data.library.CollectionNames
+import com.jdevsappstudio.kept.data.library.CollectionsLocalDataSource
 import com.jdevsappstudio.kept.data.library.LibraryLocalDataSource
 import com.jdevsappstudio.kept.data.settings.SettingsStore
 import com.jdevsappstudio.kept.core.presentation.SnackbarMessage
@@ -144,6 +148,73 @@ class FakeLibrary : LibraryLocalDataSource {
     override suspend fun undoRemoveFromShelf(removal: ShelfRemoval) { log += "undoRemove ${removal.entry.name}" }
 }
 
+/** In-memory collections with the real name rules, and a log of the writes. */
+class FakeCollections : CollectionsLocalDataSource {
+    val all = MutableStateFlow<List<SaveCollection>>(emptyList())
+    /** collection id → save ids. */
+    val members = MutableStateFlow<Map<Long, Set<Long>>>(emptyMap())
+    val chips = MutableStateFlow<List<TypeChip>>(emptyList())
+    val suggestible = MutableStateFlow<List<TagCount>>(emptyList())
+    /** tag → saves Make it files. */
+    val tagged = mutableMapOf<String, List<Long>>()
+    val log = mutableListOf<String>()
+    private var nextId = 100L
+
+    fun collection(id: Long, name: String, saves: Set<Long> = emptySet()) {
+        all.update { listOf(SaveCollection(id, name, createdAt = id, saves = saves.size)) + it }
+        members.update { it + (id to saves) }
+    }
+
+    private fun recount() = all.update { l -> l.map { it.copy(saves = members.value[it.id].orEmpty().size) } }
+
+    override fun observeCollections(): Flow<List<SaveCollection>> = all
+    override fun observeCollection(id: Long): Flow<SaveCollection?> = all.map { l -> l.firstOrNull { it.id == id } }
+    override fun observeTypeChips(id: Long): Flow<List<TypeChip>> = chips
+    override fun observeSaveIds(id: Long): Flow<Set<Long>> = members.map { it[id].orEmpty() }
+    override fun observeSuggestibleTags(): Flow<List<TagCount>> = suggestible
+    override suspend fun membership(saveIds: List<Long>): Map<Long, Int> =
+        members.value.mapValues { (_, s) -> saveIds.count { it in s } }.filterValues { it > 0 }
+
+    override suspend fun create(name: String): Long? {
+        val clean = CollectionNames.clean(name)
+        if (clean.isEmpty() || CollectionNames.taken(clean, all.value) != null) return null
+        val id = nextId++
+        log += "create $clean"
+        collection(id, clean)
+        return id
+    }
+    override suspend fun rename(id: Long, name: String): Boolean {
+        log += "rename $id $name"
+        all.update { l -> l.map { if (it.id == id) it.copy(name = CollectionNames.clean(name)) else it } }
+        return true
+    }
+    override suspend fun delete(id: Long) {
+        log += "delete $id"
+        all.update { l -> l.filterNot { it.id == id } }
+        members.update { it - id }
+    }
+    override suspend fun addSaves(id: Long, saveIds: Collection<Long>): Int {
+        log += "add $id ${saveIds.sorted()}"
+        if (all.value.none { it.id == id }) return 0
+        val before = members.value[id].orEmpty()
+        members.update { it + (id to before + saveIds) }
+        recount()
+        return saveIds.count { it !in before }
+    }
+    override suspend fun removeSaves(id: Long, saveIds: Collection<Long>) {
+        log += "remove $id ${saveIds.sorted()}"
+        members.update { it + (id to members.value[id].orEmpty() - saveIds.toSet()) }
+        recount()
+    }
+    override suspend fun makeFromTag(tag: String): MadeCollection? {
+        val id = create(CollectionNames.fromTag(tag)) ?: return null
+        val saves = tagged[tag].orEmpty()
+        members.update { it + (id to saves.toSet()) }
+        recount()
+        return MadeCollection(id, CollectionNames.fromTag(tag), saves.size)
+    }
+}
+
 class FakeSettings : SettingsStore {
     override val cloudHelp = MutableStateFlow(false)
     override suspend fun cloudHelpNow() = cloudHelp.first()
@@ -155,6 +226,8 @@ class FakeSettings : SettingsStore {
     override suspend fun claimNotificationAsk() = false
     override val recentSearches = MutableStateFlow<List<String>>(emptyList())
     override suspend fun addRecentSearch(text: String) { recentSearches.value = SettingsStore.pushRecent(recentSearches.value, text) }
+    override val dismissedSuggestions = MutableStateFlow<Set<String>>(emptySet())
+    override suspend fun dismissSuggestion(tag: String) { dismissedSuggestions.value += tag }
 }
 
 /** Snackbars whose Undo runs at once. */
