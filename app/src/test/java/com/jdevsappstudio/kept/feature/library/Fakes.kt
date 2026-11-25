@@ -1,0 +1,269 @@
+package com.jdevsappstudio.kept.feature.library
+
+import androidx.paging.PagingData
+import com.jdevsappstudio.kept.core.model.AddItemResult
+import com.jdevsappstudio.kept.core.model.ListLayout
+import com.jdevsappstudio.kept.core.model.ReadBy
+import com.jdevsappstudio.kept.core.model.Save
+import com.jdevsappstudio.kept.core.model.SaveFilter
+import com.jdevsappstudio.kept.core.model.SaveItem
+import com.jdevsappstudio.kept.core.model.SaveSource
+import com.jdevsappstudio.kept.core.model.SaveStatus
+import com.jdevsappstudio.kept.core.model.SaveType
+import com.jdevsappstudio.kept.core.model.Shelf
+import com.jdevsappstudio.kept.core.model.ShelfEntry
+import com.jdevsappstudio.kept.core.model.ShelfMerge
+import com.jdevsappstudio.kept.core.model.ShelfRemoval
+import com.jdevsappstudio.kept.core.model.SourceCounts
+import com.jdevsappstudio.kept.core.model.TagCount
+import com.jdevsappstudio.kept.core.model.TypeChip
+import com.jdevsappstudio.kept.core.model.MadeCollection
+import com.jdevsappstudio.kept.core.model.SaveCollection
+import com.jdevsappstudio.kept.data.library.CollectionNames
+import com.jdevsappstudio.kept.data.library.CollectionsLocalDataSource
+import com.jdevsappstudio.kept.data.library.LibraryLocalDataSource
+import com.jdevsappstudio.kept.data.settings.SettingsStore
+import com.jdevsappstudio.kept.core.presentation.SnackbarMessage
+import com.jdevsappstudio.kept.core.presentation.Snackbars
+import com.jdevsappstudio.kept.core.presentation.UiText
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.jupiter.api.extension.AfterEachCallback
+import org.junit.jupiter.api.extension.BeforeEachCallback
+import org.junit.jupiter.api.extension.ExtensionContext
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class MainDispatcherExtension : BeforeEachCallback, AfterEachCallback {
+    override fun beforeEach(context: ExtensionContext?) = Dispatchers.setMain(UnconfinedTestDispatcher())
+    override fun afterEach(context: ExtensionContext?) = Dispatchers.resetMain()
+}
+
+fun save(
+    id: Long,
+    title: String = "Save $id",
+    type: SaveType = SaveType.RECIPE,
+    tags: List<String> = emptyList(),
+    readBy: ReadBy? = ReadBy.CLOUD,
+) = Save(
+    id = id, createdAt = id, source = SaveSource.SHARE_IMAGE, sourceApp = null, sharedText = null, url = null,
+    imagePath = null, thumbPath = null, status = SaveStatus.READ, failReason = null, readBy = readBy, title = title,
+    summary = "", type = type, kind = "", place = "", eventDate = "", link = "", tags = tags, items = emptyList(),
+    readAt = id,
+)
+
+fun shelf(kind: String, entries: Int = 3, hidden: Boolean = false) =
+    Shelf(kind, kind.replaceFirstChar { it.uppercase() }, saves = 3, items = 0, entries = entries, hidden = hidden, position = null)
+
+/** In-memory library: flows the tests push into, and a log of the writes. */
+class FakeLibrary : LibraryLocalDataSource {
+    val saves = MutableStateFlow<Map<Long, Save>>(emptyMap())
+    val items = MutableStateFlow<Map<Long, List<SaveItem>>>(emptyMap())
+    val shelves = MutableStateFlow<List<Shelf>>(emptyList())
+    val chips = MutableStateFlow<List<TypeChip>>(emptyList())
+    val tags = MutableStateFlow<List<TagCount>>(emptyList())
+    val allTags = MutableStateFlow<List<String>>(emptyList())
+    val entries = MutableStateFlow<Map<String?, List<ShelfEntry>>>(emptyMap())
+
+    val pagedFilters = mutableListOf<SaveFilter>()
+    val tagFilters = mutableListOf<Pair<SaveFilter, Int>>()
+    val log = mutableListOf<String>()
+    private val trash = mutableMapOf<Long, Save>()
+    var readAgainResult = true
+    var addResult = AddItemResult(added = true, alreadyOnShelf = null)
+
+    fun put(vararg s: Save) = saves.update { m -> m + s.associateBy { it.id } }
+
+    override fun pagedSaves(filter: SaveFilter): Flow<PagingData<Save>> {
+        pagedFilters += filter
+        return flowOf(PagingData.empty())
+    }
+
+    override fun observeNewest(): Flow<Save?> = saves.map { m -> m.values.maxByOrNull { it.createdAt } }
+    override fun observeSave(id: Long): Flow<Save?> = saves.map { it[id] }
+    override fun observeItems(saveId: Long): Flow<List<SaveItem>> = items.map { it[saveId].orEmpty() }
+    override fun observeTypeChips(preferred: List<SaveType>): Flow<List<TypeChip>> = chips
+    override fun observeSourceCounts(filter: SaveFilter): Flow<SourceCounts> = flowOf(SourceCounts(2, 1))
+    override fun observeTags(filter: SaveFilter, limit: Int): Flow<List<TagCount>> {
+        tagFilters += filter to limit
+        return tags.map { it.take(limit) }
+    }
+    override fun observeAllTags(): Flow<List<String>> = allTags
+    override fun observeShelves(): Flow<List<Shelf>> = shelves
+    override fun observeShelfEntries(shelf: String, tag: String?): Flow<List<ShelfEntry>> = entries.map { it[tag].orEmpty() }
+
+    override suspend fun edit(id: Long, title: String, type: SaveType, tags: List<String>) {
+        log += "edit $id $title ${type.wire} $tags"
+    }
+    override suspend fun editMany(ids: List<Long>, type: SaveType?, addTags: List<String>, removeTags: List<String>) {
+        log += "editMany $ids ${type?.wire} +$addTags -$removeTags"
+    }
+    override suspend fun renameItem(itemId: Long, name: String) { log += "renameItem $itemId $name" }
+    override suspend fun deleteItem(itemId: Long) { log += "deleteItem $itemId" }
+    override suspend fun addItem(saveId: Long, name: String): AddItemResult {
+        log += "addItem $saveId $name"
+        return addResult
+    }
+
+    override suspend fun delete(ids: List<Long>) {
+        log += "delete $ids"
+        saves.update { m -> ids.forEach { id -> m[id]?.let { trash[id] = it } }; m - ids.toSet() }
+    }
+    override suspend fun undoDelete(ids: List<Long>) {
+        log += "undoDelete $ids"
+        put(*ids.mapNotNull { trash.remove(it) }.toTypedArray())
+    }
+    override suspend fun purgeStale(graceMs: Long) { log += "purgeStale" }
+    override suspend fun readAgain(id: Long): Boolean {
+        log += "readAgain $id"
+        return readAgainResult
+    }
+
+    override suspend fun setShelfHidden(kind: String, hidden: Boolean) {
+        log += "hidden $kind $hidden"
+        shelves.update { l -> l.map { if (it.kind == kind) it.copy(hidden = hidden) else it } }
+    }
+    override suspend fun renameShelf(kind: String, name: String?) { log += "rename $kind $name" }
+    override suspend fun mergeShelf(from: String, into: String): ShelfMerge {
+        log += "merge $from $into"
+        return ShelfMerge(from, into, emptyList())
+    }
+    override suspend fun undoMerge(merge: ShelfMerge) { log += "undoMerge ${merge.from}" }
+    override suspend fun reorderShelves(kinds: List<String>) { log += "reorder $kinds" }
+    override suspend fun removeFromShelf(shelf: String, entry: ShelfEntry): ShelfRemoval {
+        log += "remove $shelf ${entry.name}"
+        return ShelfRemoval(shelf, entry, previousKind = null)
+    }
+    override suspend fun undoRemoveFromShelf(removal: ShelfRemoval) { log += "undoRemove ${removal.entry.name}" }
+}
+
+/** In-memory collections with the real name rules, and a log of the writes. */
+class FakeCollections : CollectionsLocalDataSource {
+    val all = MutableStateFlow<List<SaveCollection>>(emptyList())
+    /** collection id → save ids. */
+    val members = MutableStateFlow<Map<Long, Set<Long>>>(emptyMap())
+    val chips = MutableStateFlow<List<TypeChip>>(emptyList())
+    val suggestible = MutableStateFlow<List<TagCount>>(emptyList())
+    /** tag → saves Make it files. */
+    val tagged = mutableMapOf<String, List<Long>>()
+    val log = mutableListOf<String>()
+    private var nextId = 100L
+
+    fun collection(id: Long, name: String, saves: Set<Long> = emptySet()) {
+        all.update { listOf(SaveCollection(id, name, createdAt = id, saves = saves.size)) + it }
+        members.update { it + (id to saves) }
+    }
+
+    private fun recount() = all.update { l -> l.map { it.copy(saves = members.value[it.id].orEmpty().size) } }
+
+    override fun observeCollections(): Flow<List<SaveCollection>> = all
+    override fun observeCollection(id: Long): Flow<SaveCollection?> = all.map { l -> l.firstOrNull { it.id == id } }
+    override fun observeTypeChips(id: Long): Flow<List<TypeChip>> = chips
+    override fun observeSaveIds(id: Long): Flow<Set<Long>> = members.map { it[id].orEmpty() }
+    override fun observeSuggestibleTags(): Flow<List<TagCount>> = suggestible
+    override suspend fun membership(saveIds: List<Long>): Map<Long, Int> =
+        members.value.mapValues { (_, s) -> saveIds.count { it in s } }.filterValues { it > 0 }
+
+    override suspend fun create(name: String): Long? {
+        val clean = CollectionNames.clean(name)
+        if (clean.isEmpty() || CollectionNames.taken(clean, all.value) != null) return null
+        val id = nextId++
+        log += "create $clean"
+        collection(id, clean)
+        return id
+    }
+    override suspend fun rename(id: Long, name: String): Boolean {
+        log += "rename $id $name"
+        all.update { l -> l.map { if (it.id == id) it.copy(name = CollectionNames.clean(name)) else it } }
+        return true
+    }
+    override suspend fun delete(id: Long) {
+        log += "delete $id"
+        all.update { l -> l.filterNot { it.id == id } }
+        members.update { it - id }
+    }
+    override suspend fun addSaves(id: Long, saveIds: Collection<Long>): Int {
+        log += "add $id ${saveIds.sorted()}"
+        if (all.value.none { it.id == id }) return 0
+        val before = members.value[id].orEmpty()
+        members.update { it + (id to before + saveIds) }
+        recount()
+        return saveIds.count { it !in before }
+    }
+    override suspend fun removeSaves(id: Long, saveIds: Collection<Long>) {
+        log += "remove $id ${saveIds.sorted()}"
+        members.update { it + (id to members.value[id].orEmpty() - saveIds.toSet()) }
+        recount()
+    }
+    override suspend fun makeFromTag(tag: String): MadeCollection? {
+        val id = create(CollectionNames.fromTag(tag)) ?: return null
+        val saves = tagged[tag].orEmpty()
+        members.update { it + (id to saves.toSet()) }
+        recount()
+        return MadeCollection(id, CollectionNames.fromTag(tag), saves.size)
+    }
+}
+
+class FakeSettings : SettingsStore {
+    override val cloudHelp = MutableStateFlow(false)
+    override suspend fun cloudHelpNow() = cloudHelp.first()
+    override suspend fun setCloudHelp(on: Boolean) { cloudHelp.value = on }
+    override val listLayout = MutableStateFlow(ListLayout.ROWS)
+    override suspend fun setListLayout(layout: ListLayout) { listLayout.value = layout }
+    override suspend fun claimNotificationAsk() = false
+    override val recentSearches = MutableStateFlow<List<String>>(emptyList())
+    override suspend fun addRecentSearch(text: String) { recentSearches.value = SettingsStore.pushRecent(recentSearches.value, text) }
+    override val dismissedSuggestions = MutableStateFlow<Set<String>>(emptySet())
+    override suspend fun dismissSuggestion(tag: String) { dismissedSuggestions.value += tag }
+}
+
+/** Snackbars whose Undo runs at once. */
+@OptIn(ExperimentalCoroutinesApi::class)
+fun testSnackbars() = Snackbars(CoroutineScope(UnconfinedTestDispatcher()))
+
+/** The next queued snackbar (the channel is buffered, so it waits for us). */
+suspend fun Snackbars.next(): SnackbarMessage = messages.first()
+
+/** Keeps a WhileSubscribed state live for the whole test. */
+@OptIn(ExperimentalCoroutinesApi::class)
+fun TestScope.keepActive(flow: Flow<*>) {
+    backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { flow.collect {} }
+}
+
+fun UiText.resId(): Int = when (this) {
+    is UiText.Res -> id
+    is UiText.Plural -> id
+    is UiText.Dynamic -> 0
+}
+
+/** Fill in for detail tests: [check] mirrors the real gates on [settings]/[quota]; [fill] pops [outcomes]. */
+class FakeFillRepository(
+    private val settings: SettingsStore,
+    private val quota: com.jdevsappstudio.kept.data.quota.CloudQuota,
+) : com.jdevsappstudio.kept.data.fill.FillRepository {
+    val outcomes = ArrayDeque<com.jdevsappstudio.kept.data.fill.FillOutcome>()
+    val calls = mutableListOf<Long>()
+    var gate: com.jdevsappstudio.kept.data.fill.FillOutcome? = null
+    override val filling = MutableStateFlow<Set<Long>>(emptySet())
+    override suspend fun check(): com.jdevsappstudio.kept.data.fill.FillOutcome? = when {
+        !settings.cloudHelpNow() -> com.jdevsappstudio.kept.data.fill.FillOutcome.NeedsConsent
+        quota.left(com.jdevsappstudio.kept.data.quota.CloudMeter.ANSWERS) <= 0 -> com.jdevsappstudio.kept.data.fill.FillOutcome.OutOfAnswers
+        else -> gate
+    }
+    override suspend fun fill(saveId: Long): com.jdevsappstudio.kept.data.fill.FillOutcome {
+        calls += saveId
+        return outcomes.removeFirst()
+    }
+}
+

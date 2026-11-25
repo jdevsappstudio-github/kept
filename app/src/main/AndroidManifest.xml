@@ -29,10 +29,14 @@
             </intent-filter>
         </activity>
 
-        <!-- Share target: copies what was shared into app storage, queues it, and finishes. -->
+        <!-- Share target: copies what was shared into app storage, queues it, and finishes.
+             documentLaunchMode=always: every share gets its own sheet (and its own URI grant). Without it, a share
+             while a sheet is still up was delivered to the old instance and lost. -->
         <activity
             android:name=".feature.share.ShareActivity"
             android:exported="true"
+            android:documentLaunchMode="always"
+            android:autoRemoveFromRecents="true"
             android:excludeFromRecents="true"
             android:label="@string/share_label"
             android:taskAffinity=""
