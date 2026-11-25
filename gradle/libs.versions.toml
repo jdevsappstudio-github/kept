@@ -23,6 +23,7 @@ firebaseAppCheck = "20.1.0"
 firebaseConfig = "24.0.1"
 junit5 = "5.11.4"
 assertk = "0.28.1"
+turbine = "1.2.1"
 androidxTestRunner = "1.6.2"
 androidxTestExtJunit = "1.2.1"
 
@@ -72,6 +73,7 @@ androidx-test-runner = { group = "androidx.test", name = "runner", version.ref =
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }
 room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
 assertk = { group = "com.willowtreeapps.assertk", name = "assertk", version.ref = "assertk" }
+turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

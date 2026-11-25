@@ -51,4 +51,18 @@
         <item quantity="other">%1$d saves read</item>
     </plurals>
     <string name="notif_read_body">Tap to see them in Kept.</string>
+    <!-- Library snackbars (H51 1b) -->
+    <string name="snack_undo">Undo</string>
+    <plurals name="snack_deleted">
+        <item quantity="one">Deleted</item>
+        <item quantity="other">Deleted %1$d</item>
+    </plurals>
+    <string name="snack_saved">Saved</string>
+    <string name="snack_hidden">Hidden from home</string>
+    <string name="snack_merged">Merged into %1$s</string>
+    <string name="snack_off_shelf">Off the %1$s shelf</string>
+    <string name="snack_read_again">Reading it again</string>
+    <string name="snack_read_busy">It’s being read right now</string>
+    <string name="snack_already_on_shelf">Already on your %1$s shelf</string>
+    <string name="snack_already_here">Already on this save</string>
 </resources>

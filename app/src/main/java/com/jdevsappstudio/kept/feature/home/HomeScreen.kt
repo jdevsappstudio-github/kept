@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -44,6 +45,7 @@ fun HomeScreen(state: HomeState, onAction: (HomeAction) -> Unit) {
                     Text("Cloud help (debug)", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                     Switch(checked = state.cloudHelp, onCheckedChange = { onAction(HomeAction.SetCloudHelp(it)) })
                 }
+                LibraryDebug(state, onAction)
                 ReaderSpikeRoot()
             }
         }
@@ -71,4 +73,19 @@ private fun QueueStrip(state: HomeState) {
         }
     }
     Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+/** Debug only (H51): the library as HomeViewModel sees it, until the real home lands on 27 Nov. */
+@Composable
+private fun LibraryDebug(state: HomeState, onAction: (HomeAction) -> Unit) {
+    val style = MaterialTheme.typography.bodySmall
+    Text("Library (debug): ${state.total} saves", style = MaterialTheme.typography.labelLarge)
+    Text(state.chips.joinToString(" · ") { "${it.type.label} ${it.count}" }.ifEmpty { "no chips" }, style = style)
+    Text("Just kept: " + (state.hero?.let { "${it.title.ifEmpty { "(untitled)" }} · ${it.status}" } ?: "nothing"), style = style)
+    Text(
+        "Shelves: " + state.shelves.joinToString(" · ") { "${it.title} ${if (it.countsItems) it.entries else it.saves}" }
+            .ifEmpty { "none" } + " (see all ${state.allShelves})",
+        style = style,
+    )
+    TextButton(onClick = { onAction(HomeAction.DebugDeleteHero) }, enabled = state.hero != null) { Text("Delete newest (Undo)") }
 }

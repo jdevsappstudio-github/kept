@@ -1,5 +1,6 @@
 package com.jdevsappstudio.kept.core.presentation
 
+import android.content.Context
 import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
@@ -17,5 +18,12 @@ sealed interface UiText {
         is Dynamic -> value
         is Res -> stringResource(id, *args)
         is Plural -> pluralStringResource(id, count, *args)
+    }
+
+    /** Outside composition (the snackbar host's coroutine). */
+    fun asString(context: Context): String = when (this) {
+        is Dynamic -> value
+        is Res -> context.getString(id, *args)
+        is Plural -> context.resources.getQuantityString(id, count, *args)
     }
 }

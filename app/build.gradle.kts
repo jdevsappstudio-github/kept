@@ -137,6 +137,7 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
     testImplementation(libs.assertk)
+    testImplementation(libs.turbine)
     testImplementation(libs.kotlinx.coroutines.test)
 
     // SQL tests on a real phone (install -r + am instrument; never connectedAndroidTest, it uninstalls the app).
