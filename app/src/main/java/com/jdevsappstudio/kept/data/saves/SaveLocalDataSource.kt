@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 data class QueuedSave(
     val id: Long,
     val imagePath: String?,
+    val thumbPath: String?,
     val sharedText: String?,
     val url: String?,
     val attempts: Int,
@@ -38,6 +39,9 @@ interface SaveLocalDataSource {
 
     /** One read cut short: back to QUEUED, no try counted. */
     suspend fun requeue(id: Long)
+
+    /** The 320 px list thumbnail, made once before the first read. */
+    suspend fun saveThumb(id: Long, path: String)
 
     suspend fun saveCard(id: Long, card: CardDraft, readBy: ReadBy, model: String?, now: Long)
 

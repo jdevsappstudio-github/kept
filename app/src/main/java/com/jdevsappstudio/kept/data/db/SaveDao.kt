@@ -64,6 +64,9 @@ abstract class SaveDao {
     )
     abstract suspend fun markFailure(id: Long, status: String, reason: String, attempts: Int, nextAttemptAt: Long)
 
+    @Query("UPDATE saves SET thumbPath = :path WHERE id = :id")
+    abstract suspend fun setThumb(id: Long, path: String)
+
     // ---- Card ----
 
     @Query(

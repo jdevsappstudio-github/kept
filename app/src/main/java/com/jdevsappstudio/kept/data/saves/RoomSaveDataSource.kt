@@ -61,7 +61,7 @@ class RoomSaveDataSource(
         }.distinctUntilChanged()
 
     override suspend fun claimNext(now: Long): QueuedSave? =
-        dao.claimNext(now)?.let { QueuedSave(it.id, it.imagePath, it.sharedText, it.url, it.attempts) }
+        dao.claimNext(now)?.let { QueuedSave(it.id, it.imagePath, it.thumbPath, it.sharedText, it.url, it.attempts) }
 
     override suspend fun earliestDue(): Long? = dao.earliestDue()
 
@@ -70,6 +70,8 @@ class RoomSaveDataSource(
     }
 
     override suspend fun requeue(id: Long) = dao.requeue(id)
+
+    override suspend fun saveThumb(id: Long, path: String) = dao.setThumb(id, path)
 
     override suspend fun saveCard(id: Long, card: CardDraft, readBy: ReadBy, model: String?, now: Long) {
         val save = dao.get(id) ?: return // deleted while it was being read

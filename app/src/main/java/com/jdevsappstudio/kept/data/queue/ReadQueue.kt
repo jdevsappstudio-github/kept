@@ -160,6 +160,10 @@ class ReadQueue(
         var bitmap: Bitmap? = null
         try {
             bitmap = save.imagePath?.let { images.decodeScaled(Uri.fromFile(File(it))) }
+            // Thumbnail once, from the bitmap we already have; a failed thumbnail never blocks the read.
+            if (bitmap != null && save.thumbPath == null) {
+                images.writeThumb(bitmap, save.id)?.let { store.saveThumb(save.id, it) }
+            }
             val text = listOfNotNull(save.sharedText, save.url).distinct().joinToString("\n").ifBlank { null }
             if (bitmap == null && text == null) {
                 finished = true
