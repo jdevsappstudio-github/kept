@@ -7,7 +7,14 @@ data class ItemAction(val label: String, val target: Target) {
         data class Maps(val query: String) : Target
         data class PlayStore(val query: String) : Target
         data class OpenLink(val url: String) : Target
-        data class Calendar(val title: String) : Target
+        /** [beginMillis] null = the calendar's own default; [allDay] when only a date was read; [notes] = the date as written. */
+        data class Calendar(
+            val title: String,
+            val location: String? = null,
+            val beginMillis: Long? = null,
+            val allDay: Boolean = false,
+            val notes: String? = null,
+        ) : Target
         data class Copy(val text: String) : Target
     }
 }

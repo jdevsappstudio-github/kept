@@ -17,7 +17,7 @@ class CardMappingTest {
     }
 
     @Test fun itemsKeepCaseButDedupeIgnoringIt() {
-        val items = CardMapping.items(card(items = listOf("Parasite", "parasite ", " Oldboy", "") + (1..10).map { "M$it" }))
+        val items = CardMapping.items(card(items = listOf("Parasite", "parasite ", " Oldboy", "") + (1..20).map { "M$it" }))
         assertThat(items).hasSize(CardMapping.MAX_ITEMS)
         assertThat(items.take(2)).isEqualTo(listOf("Parasite", "Oldboy"))
     }

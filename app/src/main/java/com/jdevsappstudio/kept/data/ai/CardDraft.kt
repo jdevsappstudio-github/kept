@@ -23,7 +23,11 @@ data class CardDraft(
     val kind: String,
     @Guide(description = "Up to 5 short lower-case tags a person would search for", maxItems = 5)
     val tags: List<String>,
-    @Guide(description = "Names of the separate things shown, if there are several (e.g. 5 movie titles). Empty if just one.", maxItems = 8)
+    @Guide(
+        description = "Names of the separate things shown, if there are several (e.g. 5 movie titles). Empty if just one. " +
+            "For a recipe: its ingredients, each as written with its amount (e.g. 200 g paneer).",
+        maxItems = 15,
+    )
     val items: List<String>,
     @Guide(description = "Place name or address if one is shown, else empty")
     val place: String,

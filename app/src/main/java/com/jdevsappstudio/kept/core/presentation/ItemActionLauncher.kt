@@ -34,7 +34,13 @@ object ItemActionLauncher {
             is Target.OpenLink -> start(context, view(target.url), fallback = null)
             is Target.Calendar -> start(
                 context,
-                Intent(Intent.ACTION_INSERT, CalendarContract.Events.CONTENT_URI).putExtra(CalendarContract.Events.TITLE, target.title),
+                Intent(Intent.ACTION_INSERT, CalendarContract.Events.CONTENT_URI).apply {
+                    putExtra(CalendarContract.Events.TITLE, target.title)
+                    target.location?.let { putExtra(CalendarContract.Events.EVENT_LOCATION, it) }
+                    target.notes?.let { putExtra(CalendarContract.Events.DESCRIPTION, it) }
+                    target.beginMillis?.let { putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, it) }
+                    if (target.allDay) putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, true)
+                },
                 fallback = null,
             )
         }

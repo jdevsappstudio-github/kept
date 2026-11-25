@@ -19,6 +19,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -29,12 +30,16 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.jdevsappstudio.kept.core.designsystem.KeptIconButton
 import com.jdevsappstudio.kept.core.designsystem.VSpace
 import com.jdevsappstudio.kept.core.presentation.KeptSnackbarHost
 import com.jdevsappstudio.kept.feature.home.HomeRoot
+import com.jdevsappstudio.kept.feature.library.detail.SaveDetailRoot
+import com.jdevsappstudio.kept.feature.library.edit.EditSaveRoot
 import com.jdevsappstudio.kept.feature.library.list.SaveListRoot
 import com.jdevsappstudio.kept.feature.library.shelf.ShelfRoot
 import com.jdevsappstudio.kept.feature.library.shelves.ShelvesRoot
@@ -97,8 +102,26 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
             composable<ShelvesRoute> {
                 ShelvesRoot(onBack = { nav.popBackStack() }, onOpenShelf = { nav.navigate(ShelfRoute(it)) })
             }
-            composable<SaveDetailRoute> { Stub("Save", nav) }
-            composable<EditSaveRoute> { Stub("Edit", nav) }
+            composable<SaveDetailRoute> {
+                SaveDetailRoot(
+                    onBack = { nav.popBackStack() },
+                    onEdit = { nav.navigate(EditSaveRoute(longArrayOf(it))) },
+                    onOpenCloudOut = { nav.navigate(CloudOutRoute) },
+                )
+            }
+            // k-organize: a sheet over the screen it was opened from, so it lives in a dialog destination.
+            dialog<EditSaveRoute>(
+                dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+            ) { entry ->
+                val created by entry.savedStateHandle.getStateFlow<Long?>(KEY_CREATED_COLLECTION, null).collectAsState()
+                EditSaveRoot(
+                    onClose = { nav.popBackStack() },
+                    onNewCollection = { nav.navigate(CollectionNameRoute()) },
+                    createdCollection = created,
+                    onCreatedConsumed = { entry.savedStateHandle[KEY_CREATED_COLLECTION] = null },
+                )
+            }
+            composable<CloudOutRoute> { Stub("Out of cloud answers", nav) }
             composable<CollectionRoute> { Stub("Collection", nav) }
             composable<CollectionNameRoute> { Stub("New collection", nav) }
             composable<AddRoute> { Stub("Add to Kept", nav) }
@@ -107,6 +130,9 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
         }
     }
 }
+
+/** k-newcol hands a new collection's id back to the edit sheet under this key (set on the previous entry). */
+const val KEY_CREATED_COLLECTION = "createdCollection"
 
 private val BAR_ROUTES: List<KClass<*>> = listOf(
     HomeRoute::class, SearchRoute::class, AskRoute::class,

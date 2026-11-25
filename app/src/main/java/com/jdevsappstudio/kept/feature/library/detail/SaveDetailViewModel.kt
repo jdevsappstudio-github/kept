@@ -82,6 +82,8 @@ sealed interface SaveDetailAction {
     data object OnAddScreenshotClick : SaveDetailAction
     /** The picker's result as a content URI string; null = cancelled (the save stays as it was). */
     data class OnScreenshotPicked(val ref: String?) : SaveDetailAction
+    /** k-recipe Copy ingredients: the Root put [count] lines on the clipboard; snackbar 'Copied 7 items'. */
+    data class OnCopied(val count: Int) : SaveDetailAction
 }
 
 sealed interface SaveDetailEvent {
@@ -185,6 +187,7 @@ class SaveDetailViewModel(
                 viewModelScope.launch { library.deleteItem(item.id) }
             }
             is SaveDetailAction.OnAddItem -> addItem(action.name.trim())
+            is SaveDetailAction.OnCopied -> snackbars.show(UiText.Plural(R.plurals.snack_copied_items, action.count, action.count))
             SaveDetailAction.OnEditClick, SaveDetailAction.OnOpenOriginalClick,
             SaveDetailAction.OnShareClick, SaveDetailAction.OnBackClick -> Unit
         }

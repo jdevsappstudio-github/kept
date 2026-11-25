@@ -19,7 +19,9 @@ fun KeptSnackbarHost(modifier: Modifier = Modifier, snackbars: Snackbars = koinI
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     ObserveAsEvents(snackbars.messages) { message ->
-        host.currentSnackbarData?.dismiss()
+        // A plain message never cuts an Undo short (it waits its turn); anything else replaces what shows.
+        val current = host.currentSnackbarData
+        if (current != null && (current.visuals.actionLabel == null || message.action != null)) current.dismiss()
         scope.launch {
             val result = host.showSnackbar(
                 message = message.text.asString(context),

@@ -76,6 +76,10 @@
     <string name="snack_already_on_shelf">Already on your %1$s shelf</string>
     <string name="snack_already_here">Already on this save</string>
     <!-- Collections (H55) -->
+    <plurals name="snack_copied_items">
+        <item quantity="one">Copied %d item</item>
+        <item quantity="other">Copied %d items</item>
+    </plurals>
     <plurals name="snack_made_collection">
         <item quantity="one">Made %1$s · %2$d save</item>
         <item quantity="other">Made %1$s · %2$d saves</item>

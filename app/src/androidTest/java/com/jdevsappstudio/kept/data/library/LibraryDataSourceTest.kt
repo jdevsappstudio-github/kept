@@ -84,6 +84,15 @@ class LibraryDataSourceTest {
         assertThat(entries.first().saveId).isEqualTo(zodiac)
     }
 
+    @Test fun recipeIngredientsStayOffTheShelf() = runTest {
+        save("Paneer tikka", "recipes", type = "recipe", items = listOf("200 g paneer", "1 onion"))
+        save("Lemon rice", "recipes", type = "recipe", items = listOf("1 cup rice", "1 onion"))
+        save("Dal", "recipes", type = "recipe")
+        val shelf = lib.observeShelves().first().single()
+        assertThat(listOf(shelf.saves, shelf.items, shelf.entries)).containsExactly(3, 0, 3)
+        assertThat(lib.observeShelfEntries("recipes").first().map { it.name }).containsExactly("Dal", "Lemon rice", "Paneer tikka")
+    }
+
     @Test fun notAMovieAndUndo() = runTest {
         save("A", "movies", items = listOf("Prisoners", "Heat"))
         save("B", "movies", items = listOf("Prisoners"))

@@ -27,6 +27,14 @@ class SaveDisplayTest {
     }
 
     @Test
+    fun `package names show as app names, unknown ones fall back`() {
+        assertThat(save(SaveSource.SHARE_TEXT, app = "com.instagram.android").metaLine()).isEqualTo("from Instagram")
+        assertThat(save(SaveSource.SHARE_TEXT, app = "com.android.shell").metaLine()).isEqualTo("from a link")
+        assertThat(appName("YouTube")).isEqualTo("YouTube")
+        assertThat(appName(" ")).isEqualTo(null)
+    }
+
+    @Test
     fun `title by status`() {
         assertThat(save(SaveSource.PICKER, status = SaveStatus.READING, title = "").displayTitle()).isEqualTo("Reading it…")
         assertThat(save(SaveSource.PICKER, status = SaveStatus.READ, title = "").displayTitle()).isEqualTo("Untitled")

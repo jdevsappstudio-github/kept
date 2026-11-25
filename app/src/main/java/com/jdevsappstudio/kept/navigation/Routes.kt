@@ -28,3 +28,4 @@ import kotlinx.serialization.Serializable
 @Serializable data object AddRoute
 @Serializable data object SettingsRoute
 @Serializable data object NeedLookRoute
+@Serializable data object CloudOutRoute
