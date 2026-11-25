@@ -82,6 +82,19 @@ abstract class LibraryDao {
     )
     abstract fun observeShelves(): Flow<List<ShelfRow>>
 
+    /** Tile pictures: per shelf, the 3 newest saves that have a picture (thumb first, else the original). */
+    @Query(
+        "SELECT v.shelf AS grp, COALESCE(s.thumbPath, s.imagePath) AS path FROM shelf_saves v JOIN saves s ON s.id = v.saveId " +
+            "WHERE s.id IN (SELECT v2.saveId FROM shelf_saves v2 JOIN saves s2 ON s2.id = v2.saveId WHERE v2.shelf = v.shelf " +
+            "  AND COALESCE(s2.thumbPath, s2.imagePath) IS NOT NULL ORDER BY s2.createdAt DESC LIMIT 3) " +
+            "ORDER BY s.createdAt DESC",
+    )
+    abstract fun observeShelfPreviews(): Flow<List<PreviewRow>>
+
+    /** Home subtitle "12 new this week": saves kept since [since], read or not. */
+    @Query("SELECT COUNT(*) FROM saves WHERE deletedAt IS NULL AND createdAt >= :since")
+    abstract fun observeCountSince(since: Long): Flow<Int>
+
     /**
      * Rows of one shelf, newest first: items merged by key (name + source from the newest save that has it),
      * then saves with no items at all as their own rows. [tag] narrows to saves with that tag (sub-kind chips).
@@ -262,3 +275,6 @@ data class ShelfEntryRow(
 )
 
 data class SaveItemRow(val id: Long, val name: String, val hidden: Boolean, val otherSaves: Int)
+
+/** One tile picture: [grp] = shelf kind or collection id. */
+data class PreviewRow(val grp: String, val path: String)

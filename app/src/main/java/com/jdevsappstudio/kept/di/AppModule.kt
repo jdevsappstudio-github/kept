@@ -64,6 +64,7 @@ import com.jdevsappstudio.kept.data.ads.RewardedAds
 import com.jdevsappstudio.kept.data.config.FirebaseRemoteValues
 import com.jdevsappstudio.kept.data.config.RemoteValues
 import com.jdevsappstudio.kept.data.quota.CloudQuota
+import com.jdevsappstudio.kept.data.quota.CloudMeter
 import com.jdevsappstudio.kept.data.quota.DataStoreQuotaStore
 import com.jdevsappstudio.kept.data.quota.QuotaLimitsSource
 import com.jdevsappstudio.kept.data.quota.QuotaStore
@@ -129,7 +130,10 @@ val appModule = module {
     viewModel { AddViewModel(get(), get(), get(), get()) }
     viewModel {
         val queue = get<ReadQueue>()
-        HomeViewModel(combine(get<SaveLocalDataSource>().observeCounts(), queue.route, queue.pause, ::QueueView), get(), get(), get(), get())
+        HomeViewModel(
+            combine(get<SaveLocalDataSource>().observeCounts(), queue.route, queue.pause, ::QueueView), get(), get(), get(), get(),
+            reads = get<CloudQuota>().observe(CloudMeter.READS),
+        )
     }
     viewModel { SaveListViewModel(get(), get(), get(), get()) }
     viewModel { SearchViewModel(get(), get<SaveLocalDataSource>().observeCounts(), get(), get(), get(), get(), get()) }

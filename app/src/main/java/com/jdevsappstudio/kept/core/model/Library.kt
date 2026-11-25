@@ -43,6 +43,8 @@ data class Shelf(
     val entries: Int,
     val hidden: Boolean,
     val position: Int?,
+    /** Tile pictures: up to 3 newest thumbs (or originals) of the shelf's saves. */
+    val previews: List<String> = emptyList(),
 ) {
     /** Tile reads "23 items" for item shelves, "7 saves" otherwise. */
     val countsItems: Boolean get() = items > 0

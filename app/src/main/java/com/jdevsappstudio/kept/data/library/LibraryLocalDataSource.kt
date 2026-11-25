@@ -30,6 +30,8 @@ interface LibraryLocalDataSource {
 
     /** Every shelf in display order, hidden ones included (k-shelves); home takes [ShelfOrder.onHome]. */
     fun observeShelves(): Flow<List<Shelf>>
+    /** Saves kept since [since] (home subtitle 'N new this week'). */
+    fun observeCountSince(since: Long): Flow<Int>
     fun observeShelfEntries(shelf: String, tag: String? = null): Flow<List<ShelfEntry>>
 
     // Edit sheet (k-organize)

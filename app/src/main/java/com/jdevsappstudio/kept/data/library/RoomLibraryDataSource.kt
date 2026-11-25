@@ -27,6 +27,7 @@ import com.jdevsappstudio.kept.data.saves.CardMapping
 import com.jdevsappstudio.kept.data.saves.ItemKey
 import com.jdevsappstudio.kept.data.saves.SaveLocalDataSource
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
@@ -73,17 +74,20 @@ class RoomLibraryDataSource(
     override fun observeAllTags(): Flow<List<String>> = dao.observeAllTags().distinctUntilChanged()
 
     override fun observeShelves(): Flow<List<Shelf>> =
-        dao.observeShelves().map { rows ->
+        combine(dao.observeShelves(), dao.observeShelfPreviews()) { rows, pics ->
+            val previews = pics.groupBy({ it.grp }, { it.path })
             ShelfOrder.sort(
                 rows.map {
                     Shelf(
                         kind = it.kind, title = ShelfOrder.title(it.kind, it.name), saves = it.saves, items = it.items,
                         entries = if (it.items > 0) it.items + it.bareSaves else it.saves,
-                        hidden = it.hidden, position = it.position,
+                        hidden = it.hidden, position = it.position, previews = previews[it.kind].orEmpty(),
                     )
                 },
             )
         }.distinctUntilChanged()
+
+    override fun observeCountSince(since: Long): Flow<Int> = dao.observeCountSince(since).distinctUntilChanged()
 
     override fun observeShelfEntries(shelf: String, tag: String?): Flow<List<ShelfEntry>> =
         dao.observeShelfEntries(shelf, tag).map { rows ->

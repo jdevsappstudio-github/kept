@@ -101,6 +101,8 @@ class FakeLibrary : LibraryLocalDataSource {
     }
     override fun observeAllTags(): Flow<List<String>> = allTags
     override fun observeShelves(): Flow<List<Shelf>> = shelves
+    val newThisWeek = MutableStateFlow(0)
+    override fun observeCountSince(since: Long): Flow<Int> = newThisWeek
     override fun observeShelfEntries(shelf: String, tag: String?): Flow<List<ShelfEntry>> = entries.map { it[tag].orEmpty() }
 
     override suspend fun edit(id: Long, title: String, type: SaveType, tags: List<String>) {
