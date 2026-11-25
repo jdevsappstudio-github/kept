@@ -13,17 +13,24 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     entities = [
         SaveEntity::class, SaveTagEntity::class, SaveItemEntity::class,
         CollectionEntity::class, CollectionSaveEntity::class, SearchFtsEntity::class, ShelfEntity::class,
+        AskTurnEntity::class, AskRefEntity::class, SentEntity::class,
     ],
     views = [ShelfSaveView::class],
-    version = 3,
+    version = 4,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2, spec = KeptDatabase.V1ToV2::class)],
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2, spec = KeptDatabase.V1ToV2::class),
+        // v4 (H58): Ask chat + refs + the sent log; new tables only.
+        AutoMigration(from = 3, to = 4),
+    ],
 )
 abstract class KeptDatabase : RoomDatabase() {
     abstract fun saveDao(): SaveDao
     abstract fun libraryDao(): LibraryDao
     abstract fun searchDao(): SearchDao
     abstract fun collectionDao(): CollectionDao
+    abstract fun askDao(): AskDao
+    abstract fun sentDao(): SentDao
 
     /** v2: soft delete, item keys + hidden, shelves. Backfills keys (close enough to ItemKey) and folds unknown types into other. */
     class V1ToV2 : AutoMigrationSpec {

@@ -71,6 +71,17 @@ import com.jdevsappstudio.kept.data.quota.RemoteQuotaLimits
 import com.jdevsappstudio.kept.data.quota.SystemQuotaDay
 import com.jdevsappstudio.kept.feature.quota.CloudOutViewModel
 
+import com.jdevsappstudio.kept.data.ai.CloudAsker
+import com.jdevsappstudio.kept.data.ai.FirebaseCloudAsker
+import com.jdevsappstudio.kept.data.ask.AskLocalDataSource
+import com.jdevsappstudio.kept.data.ask.AskRepository
+import com.jdevsappstudio.kept.data.ask.CloudAskRepository
+import com.jdevsappstudio.kept.data.ask.RoomAskDataSource
+import com.jdevsappstudio.kept.data.sent.RoomSentLogDataSource
+import com.jdevsappstudio.kept.data.sent.SentLogLocalDataSource
+import com.jdevsappstudio.kept.feature.ask.AskViewModel
+import com.jdevsappstudio.kept.feature.sent.SentViewModel
+
 val IMAGE_DISPATCHER = named("image")
 val APP_SCOPE = named("appScope")
 
@@ -107,7 +118,7 @@ val appModule = module {
     }
     single { ReadNotifications(androidContext()) }
     single<BackgroundReads> { WorkBackgroundReads(androidContext(), get()) }
-    single { ReadQueue(get(), get(), get(), get(), get(), get(), get(), get(), get(APP_SCOPE)) }
+    single { ReadQueue(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(APP_SCOPE)) }
     worker { params -> CloudReadWorker(androidContext(), params.get(), get(), get(), get()) }
     single { Snackbars(get(APP_SCOPE)) }
     single { PickedImports(get(), get(), get(APP_SCOPE)) }
@@ -125,5 +136,15 @@ val appModule = module {
     viewModel { CollectionViewModel(get(), get(), get(), get(), get()) }
     viewModel { CollectionNameViewModel(get(), get()) }
     viewModel { CloudOutViewModel(get(), get(), get()) }
+    // Ask (H58) + the sent log behind every Cloud chip (k-sent).
+    single<SentLogLocalDataSource> { RoomSentLogDataSource(get<KeptDatabase>().sentDao()) }
+    single<AskLocalDataSource> { RoomAskDataSource(get<KeptDatabase>().askDao()) }
+    single<CloudAsker> { FirebaseCloudAsker(BuildConfig.HAS_FIREBASE, RemoteReadModelConfig.forAsk(get())) }
+    single<AskRepository> {
+        val network = get<NetworkStatus>()
+        CloudAskRepository(get(), get(), get(), get(), get(), network::isOnline, get(APP_SCOPE))
+    }
+    viewModel { AskViewModel(get(), get(), get(), get(), get(), get<NetworkStatus>().online, BuildConfig.VERSION_NAME) }
+    viewModel { SentViewModel(get(), get()) }
     viewModel { ReaderSpikeViewModel(get(), get()) { File(androidContext().filesDir, "spike") } }
 }

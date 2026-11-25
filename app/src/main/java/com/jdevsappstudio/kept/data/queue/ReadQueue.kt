@@ -1,5 +1,8 @@
 package com.jdevsappstudio.kept.data.queue
 
+import com.jdevsappstudio.kept.core.model.SentKind
+import com.jdevsappstudio.kept.data.sent.SentLogLocalDataSource
+
 import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
@@ -53,6 +56,7 @@ class ReadQueue(
     private val quota: CloudQuota,
     private val network: NetworkStatus,
     private val background: BackgroundReads,
+    private val sentLog: SentLogLocalDataSource,
     private val scope: CoroutineScope,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
@@ -176,6 +180,10 @@ class ReadQueue(
             if (bitmap == null && text == null) {
                 finished = true
                 return Outcome.Failed(ReadFailure.UNREADABLE)
+            }
+            // k-sent (H58): logged as it leaves; the save's own text + image count (the instructions hold nothing of theirs).
+            if (engine == ReadEngine.CLOUD) {
+                sentLog.log(SentKind.READ, text.orEmpty(), images = if (bitmap != null) 1 else 0, saveId = save.id, now = clock())
             }
             val result = reader.read(bitmap, text, engine)
             finished = true

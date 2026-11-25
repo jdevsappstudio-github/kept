@@ -57,6 +57,25 @@ class MigrationTest {
         }
     }
 
+    /** v3 → v4 (H58): new Ask + sent-log tables only; existing saves untouched. */
+    @Test fun v3ToV4() {
+        helper.createDatabase(DB, 3).apply {
+            execSQL(
+                "INSERT INTO saves (id, createdAt, source, status, attempts, nextAttemptAt, title, summary, type, kind, " +
+                    "place, eventDate, link, fullText) VALUES (1, 1, 'SHARE_IMAGE', 'READ', 0, 0, 'x', '', 'place', '', '', '', '', '')",
+            )
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 4, true)
+        db.execSQL("INSERT INTO ask_turns (createdAt, question, answer, status, hidden, sourceIds) VALUES (1, 'q', '', 'PENDING', 0, '')")
+        db.execSQL("INSERT INTO ask_refs (turnId, saveId, position) VALUES (1, 1, 0)")
+        db.execSQL("INSERT INTO sent_log (sentAt, kind, text, images) VALUES (1, 'ASK', 't', 0)")
+        db.query("SELECT COUNT(*) FROM saves").use {
+            it.moveToFirst()
+            assertThat(it.getInt(0)).isEqualTo(1)
+        }
+    }
+
     private companion object {
         const val DB = "migration-test"
     }

@@ -70,7 +70,7 @@ class SearchQuery private constructor(val text: String, val words: List<String>)
             "sneaker" to "shoe", "footwear" to "shoe",
         )
 
-        private fun canonical(word: String): String = SYNONYMS[word] ?: word
+        internal fun canonical(word: String): String = SYNONYMS[word] ?: word
 
         /** English plural → singular, conservative: short words and -ss/-us/-is endings stay as they are. */
         internal fun singular(word: String): String = when {
