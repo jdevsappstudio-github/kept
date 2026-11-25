@@ -31,6 +31,21 @@ interface SettingsStore {
 
     /** True only the first time: POST_NOTIFICATIONS is asked once, after the first share (BUILD-SPEC §4). */
     suspend fun claimNotificationAsk(): Boolean
+
+    /** k-search empty state: the last [RECENT_SEARCHES] searches, newest first (H54: kept on tap or Enter). */
+    val recentSearches: Flow<List<String>>
+    suspend fun addRecentSearch(text: String)
+
+    companion object {
+        const val RECENT_SEARCHES = 5
+
+        /** Newest first, no repeats (case-insensitive), at most [RECENT_SEARCHES]. */
+        fun pushRecent(list: List<String>, text: String): List<String> {
+            val clean = text.trim().replace(Regex("\\s+"), " ")
+            if (clean.isEmpty()) return list
+            return (listOf(clean) + list.filterNot { it.equals(clean, ignoreCase = true) }).take(RECENT_SEARCHES)
+        }
+    }
 }
 
 /** DataStore does its file IO on its own IO scope. */
@@ -76,7 +91,21 @@ class DataStoreSettingsStore(private val context: Context) : SettingsStore {
         return first
     }
 
+    override val recentSearches: Flow<List<String>> = context.settings.data
+        .map { p -> p[RECENT]?.split(RECENT_SEP)?.filter { it.isNotEmpty() }.orEmpty() }
+        .distinctUntilChanged()
+
+    override suspend fun addRecentSearch(text: String) {
+        context.settings.edit { p ->
+            val now = p[RECENT]?.split(RECENT_SEP)?.filter { it.isNotEmpty() }.orEmpty()
+            p[RECENT] = SettingsStore.pushRecent(now, text).joinToString(RECENT_SEP)
+        }
+    }
+
     private companion object {
+        val RECENT = stringPreferencesKey("recent_searches")
+        /** Searches are trimmed to single spaces, so a newline never occurs inside one. */
+        const val RECENT_SEP = "\n"
         val NOTIF_ASKED = booleanPreferencesKey("notifications_asked")
         val CLOUD_HELP = booleanPreferencesKey("cloud_help")
         val READS_DAY = intPreferencesKey("cloud_reads_day")

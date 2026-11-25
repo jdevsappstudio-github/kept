@@ -43,6 +43,9 @@ import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import com.jdevsappstudio.kept.data.library.LibraryLocalDataSource
 import com.jdevsappstudio.kept.data.library.RoomLibraryDataSource
+import com.jdevsappstudio.kept.data.search.RoomSearchDataSource
+import com.jdevsappstudio.kept.data.search.SearchLocalDataSource
+import com.jdevsappstudio.kept.feature.search.SearchViewModel
 
 val IMAGE_DISPATCHER = named("image")
 val APP_SCOPE = named("appScope")
@@ -58,6 +61,7 @@ val appModule = module {
     single<SaveLocalDataSource> { RoomSaveDataSource(get(), get(IMAGE_DISPATCHER)) }
     single { get<KeptDatabase>().libraryDao() }
     single<LibraryLocalDataSource> { RoomLibraryDataSource(get(), get(), get()) }
+    single<SearchLocalDataSource> { RoomSearchDataSource(get<KeptDatabase>().searchDao()) }
     single { SaveFiles(androidContext(), get(IMAGE_DISPATCHER)) }
     single<SettingsStore> { DataStoreSettingsStore(androidContext()) }
     single { NetworkStatus(androidContext()) }
@@ -77,6 +81,7 @@ val appModule = module {
         HomeViewModel(combine(get<SaveLocalDataSource>().observeCounts(), queue.route, queue.pause, ::QueueView), get(), get(), get())
     }
     viewModel { SaveListViewModel(get(), get(), get(), get()) }
+    viewModel { SearchViewModel(get(), get<SaveLocalDataSource>().observeCounts(), get(), get(), get()) }
     viewModel { ShelfViewModel(get(), get(), get()) }
     viewModel { ShelvesViewModel(get()) }
     viewModel { SaveDetailViewModel(get(), get(), get()) }

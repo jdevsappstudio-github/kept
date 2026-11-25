@@ -43,6 +43,20 @@ class MigrationTest {
         }
     }
 
+    /** v2 → v3 (H54): search rows survive the tokenizer change and now fold accents. */
+    @Test fun v2ToV3() {
+        helper.createDatabase(DB, 2).apply {
+            execSQL("INSERT INTO search_fts (rowid, body) VALUES (7, 'Sunbeam Café, North Goa')")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 3, true, KeptDatabase.MIGRATION_2_3)
+        db.query("SELECT rowid FROM search_fts WHERE search_fts MATCH 'cafe* goa*'").use {
+            assertThat(it.count).isEqualTo(1)
+            it.moveToFirst()
+            assertThat(it.getLong(0)).isEqualTo(7L)
+        }
+    }
+
     private companion object {
         const val DB = "migration-test"
     }

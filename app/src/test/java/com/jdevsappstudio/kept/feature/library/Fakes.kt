@@ -153,6 +153,8 @@ class FakeSettings : SettingsStore {
     override val listLayout = MutableStateFlow(ListLayout.ROWS)
     override suspend fun setListLayout(layout: ListLayout) { listLayout.value = layout }
     override suspend fun claimNotificationAsk() = false
+    override val recentSearches = MutableStateFlow<List<String>>(emptyList())
+    override suspend fun addRecentSearch(text: String) { recentSearches.value = SettingsStore.pushRecent(recentSearches.value, text) }
 }
 
 /** Snackbars whose Undo runs at once. */

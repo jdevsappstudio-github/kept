@@ -5,6 +5,7 @@ import androidx.room.DatabaseView
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Fts4
+import androidx.room.FtsOptions
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.jdevsappstudio.kept.core.model.ReadBy
@@ -91,8 +92,11 @@ data class CollectionEntity(
 )
 data class CollectionSaveEntity(val collectionId: Long, val saveId: Long)
 
-/** Full-text index, rowid = save id. One `body` column, rebuilt whenever a save's card changes. */
-@Fts4
+/**
+ * Full-text index, rowid = save id. One `body` column, rebuilt whenever a save's card changes.
+ * unicode61 (v3, H54): case and accents fold for every script, so 'cafe' finds 'Café'.
+ */
+@Fts4(tokenizer = FtsOptions.TOKENIZER_UNICODE61)
 @Entity(tableName = "search_fts")
 data class SearchFtsEntity(
     @PrimaryKey @ColumnInfo(name = "rowid") val rowid: Long,
