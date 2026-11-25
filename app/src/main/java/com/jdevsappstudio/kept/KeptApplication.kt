@@ -2,6 +2,8 @@ package com.jdevsappstudio.kept
 
 import android.app.Application
 import android.os.StrictMode
+import androidx.work.Configuration
+import org.koin.androidx.workmanager.factory.KoinWorkerFactory
 import com.google.firebase.Firebase
 import com.google.firebase.initialize
 import com.jdevsappstudio.kept.core.AppCheckSetup
@@ -13,7 +15,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.koin.core.context.startKoin
 
-class KeptApplication : Application() {
+class KeptApplication : Application(), Configuration.Provider {
+    // WorkManager starts lazily on first use (the manifest removes its startup initializer) with Koin's factory.
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder().setWorkerFactory(KoinWorkerFactory()).build()
+
     override fun onCreate() {
         super.onCreate()
         if (BuildConfig.DEBUG) {

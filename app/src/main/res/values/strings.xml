@@ -36,4 +36,19 @@
     <string name="share_open_it">Open it</string>
     <string name="share_add_title">Add a title</string>
     <string name="share_done">Done</string>
+    <!-- Reading notice (BUILD-SPEC 4): one quiet notification -->
+    <string name="notif_channel_reading">Reading</string>
+    <string name="notif_channel_reading_desc">Shows when saves are being read or are waiting to be read.</string>
+    <plurals name="notif_waiting">
+        <item quantity="one">%1$d save waiting</item>
+        <item quantity="other">%1$d saves waiting</item>
+    </plurals>
+    <string name="notif_waiting_body">Open Kept to finish reading.</string>
+    <string name="notif_progress">Reading %1$d of %2$d</string>
+    <string name="notif_progress_body">With Gemini in the cloud</string>
+    <plurals name="notif_read">
+        <item quantity="one">%1$d save read</item>
+        <item quantity="other">%1$d saves read</item>
+    </plurals>
+    <string name="notif_read_body">Tap to see them in Kept.</string>
 </resources>

@@ -25,7 +25,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -49,6 +51,7 @@ class ReadQueue(
     private val images: ImageLoader,
     private val settings: SettingsStore,
     private val network: NetworkStatus,
+    private val background: BackgroundReads,
     private val scope: CoroutineScope,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
@@ -57,6 +60,10 @@ class ReadQueue(
 
     private val _route = MutableStateFlow<ReadRoute?>(null)
     val route: StateFlow<ReadRoute?> = _route.asStateFlow()
+
+    private val _foreground = MutableStateFlow(true)
+    /** Kept (any of its activities) is on screen. The cloud worker hides its notice while this is true. */
+    val foreground: StateFlow<Boolean> = _foreground.asStateFlow()
 
     private var started = false
 
@@ -68,25 +75,37 @@ class ReadQueue(
             store.requeueInterrupted()
             val foreground = withContext(Dispatchers.Main.immediate) {
                 ProcessLifecycleOwner.get().lifecycle.currentStateFlow
-            }.map { it.isAtLeast(Lifecycle.State.STARTED) }.distinctUntilChanged()
+            }.map { it.isAtLeast(Lifecycle.State.STARTED) }.distinctUntilChanged().onEach { _foreground.value = it }
             combine(
-                store.observeCounts().map { it.queued > 0 || it.reading > 0 }.distinctUntilChanged(),
+                store.observeCounts().map { it.pending > 0 }.distinctUntilChanged(),
                 foreground,
                 settings.cloudHelp,
                 network.online,
-            ) { pending, fg, cloudHelp, online -> if (pending) Trigger(fg, cloudHelp, online) else null }
+                ::Trigger,
+            )
                 // Restart only when an input changes, not on every finished card (that would cut reads short).
                 .distinctUntilChanged()
-                .collectLatest { t -> if (t != null) drain(t.foreground) else _pause.value = QueuePause.NONE }
+                .collectLatest { t ->
+                    if (t.foreground) background.clearNotice()
+                    if (!t.pending) {
+                        _pause.value = QueuePause.NONE
+                        return@collectLatest
+                    }
+                    drain(t.foreground)
+                }
         }
     }
 
     private suspend fun drain(foreground: Boolean) {
+        var workerAsked = false
         while (true) {
             val route = routing.current()
             _route.value = route
             val engine = when (route) {
-                ReadRoute.DEVICE -> if (foreground) ReadEngine.DEVICE else return pause(QueuePause.IN_BACKGROUND)
+                ReadRoute.DEVICE -> if (foreground) ReadEngine.DEVICE else {
+                    background.showWaiting(store.observeCounts().first().pending)
+                    return pause(QueuePause.IN_BACKGROUND)
+                }
                 ReadRoute.CLOUD -> ReadEngine.CLOUD
                 ReadRoute.OFFLINE -> return pause(QueuePause.OFFLINE)
                 ReadRoute.NEEDS_CONSENT -> return pause(QueuePause.NEEDS_CONSENT)
@@ -96,6 +115,12 @@ class ReadQueue(
                 return pause(QueuePause.CLOUD_CAP) // saves wait for tomorrow (H32/H46); a restart re-checks the day
             }
             _pause.value = QueuePause.NONE
+            // Cloud reads waiting: queue the worker now, not when Kept leaves the screen. ProcessLifecycleOwner reports
+            // "stopped" ~700 ms late and OEM memory guards can kill the process sooner (seen on the 12R).
+            if (engine == ReadEngine.CLOUD && !workerAsked) {
+                background.keepCloudReading()
+                workerAsked = true
+            }
             val save = store.claimNext(clock())
             if (save == null) {
                 val due = store.earliestDue() ?: return
@@ -123,7 +148,7 @@ class ReadQueue(
         }
     }
 
-    private data class Trigger(val foreground: Boolean, val cloudHelp: Boolean, val online: Boolean)
+    private data class Trigger(val pending: Boolean, val foreground: Boolean, val cloudHelp: Boolean, val online: Boolean)
 
     private sealed interface Outcome {
         data object Done : Outcome

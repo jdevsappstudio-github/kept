@@ -1,6 +1,11 @@
 package com.jdevsappstudio.kept.feature.share
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -17,12 +22,15 @@ import org.koin.androidx.viewmodel.ext.android.viewModel
 class ShareActivity : ComponentActivity() {
     private val viewModel: ShareViewModel by viewModel()
 
+    // The answer doesn't matter: without notifications the in-app strip still shows the reading.
+    private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         viewModel.start(payload(intent)) // no-op after a rotation: the VM already started
         setContent {
             KeptTheme {
-                ShareRoot(viewModel, onOpenApp = ::openApp, onClose = ::finish)
+                ShareRoot(viewModel, onOpenApp = ::openApp, onClose = ::finish, onAskNotifications = ::askNotifications)
             }
         }
     }
@@ -44,6 +52,14 @@ class ShareActivity : ComponentActivity() {
             ?: intent.getStringExtra(Intent.EXTRA_SUBJECT)
         val source = referrer?.takeIf { it.scheme == "android-app" }?.host
         return SharePayload(images, text, source)
+    }
+
+    private fun askNotifications() {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     private fun openApp(saveId: Long?) {

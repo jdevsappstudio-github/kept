@@ -16,7 +16,12 @@ import com.jdevsappstudio.kept.data.saves.RoomSaveDataSource
 import com.jdevsappstudio.kept.data.saves.SaveLocalDataSource
 import com.jdevsappstudio.kept.feature.spike.ReaderSpikeViewModel
 import android.util.Log
+import com.jdevsappstudio.kept.data.queue.BackgroundReads
+import com.jdevsappstudio.kept.data.queue.CloudReadWorker
+import com.jdevsappstudio.kept.data.queue.ReadNotifications
 import com.jdevsappstudio.kept.data.queue.ReadQueue
+import com.jdevsappstudio.kept.data.queue.WorkBackgroundReads
+import org.koin.androidx.workmanager.dsl.worker
 import com.jdevsappstudio.kept.feature.home.HomeViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -44,12 +49,15 @@ val appModule = module {
     single { SettingsStore(androidContext()) }
     single { NetworkStatus(androidContext()) }
     single { ReadRouting(get(), get(), get()) }
-    viewModel { ShareViewModel(get(), get(), get()) }
+    viewModel { ShareViewModel(get(), get(), get(), get()) }
     // App-scoped work (read queue). SupervisorJob: one failure never cancels the rest; the handler logs instead of crashing.
     single(APP_SCOPE) {
         CoroutineScope(SupervisorJob() + Dispatchers.Default + CoroutineExceptionHandler { _, e -> Log.e("Kept", "app scope", e) })
     }
-    single { ReadQueue(get(), get(), get(), get(), get(), get(), get(APP_SCOPE)) }
+    single { ReadNotifications(androidContext()) }
+    single<BackgroundReads> { WorkBackgroundReads(androidContext(), get()) }
+    single { ReadQueue(get(), get(), get(), get(), get(), get(), get(), get(APP_SCOPE)) }
+    worker { params -> CloudReadWorker(androidContext(), params.get(), get(), get(), get()) }
     viewModel { HomeViewModel(get(), get(), get()) }
     viewModel { ReaderSpikeViewModel(get(), get()) { File(androidContext().filesDir, "spike") } }
 }

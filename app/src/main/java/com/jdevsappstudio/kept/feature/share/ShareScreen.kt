@@ -45,12 +45,13 @@ import com.jdevsappstudio.kept.core.presentation.UiText
 import com.jdevsappstudio.kept.data.queue.ReadRoute
 
 @Composable
-fun ShareRoot(viewModel: ShareViewModel, onOpenApp: (Long?) -> Unit, onClose: () -> Unit) {
+fun ShareRoot(viewModel: ShareViewModel, onOpenApp: (Long?) -> Unit, onClose: () -> Unit, onAskNotifications: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     ObserveAsEvents(viewModel.events) { event ->
         when (event) {
             is ShareEvent.OpenApp -> onOpenApp(event.saveId)
             ShareEvent.Close -> onClose()
+            ShareEvent.AskNotifications -> onAskNotifications()
         }
     }
     ShareScreen(state = state, onAction = viewModel::onAction)

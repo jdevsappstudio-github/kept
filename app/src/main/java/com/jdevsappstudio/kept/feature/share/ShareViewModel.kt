@@ -8,6 +8,7 @@ import com.jdevsappstudio.kept.data.files.CopyResult
 import com.jdevsappstudio.kept.data.files.SaveFiles
 import com.jdevsappstudio.kept.data.queue.ReadRoute
 import com.jdevsappstudio.kept.data.queue.ReadRouting
+import com.jdevsappstudio.kept.data.settings.SettingsStore
 import com.jdevsappstudio.kept.data.saves.SaveLocalDataSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
@@ -48,6 +49,8 @@ sealed interface ShareAction {
 sealed interface ShareEvent {
     data class OpenApp(val saveId: Long?) : ShareEvent
     data object Close : ShareEvent
+    /** First share that will be read: the activity asks for POST_NOTIFICATIONS (Android 13+, if not granted). */
+    data object AskNotifications : ShareEvent
 }
 
 /**
@@ -58,6 +61,7 @@ class ShareViewModel(
     private val store: SaveLocalDataSource,
     private val files: SaveFiles,
     private val routing: ReadRouting,
+    private val settings: SettingsStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ShareState())
@@ -81,6 +85,7 @@ class ShareViewModel(
                 _state.update { it.copy(phase = SharePhase.FAILED) }
             }
             _state.update { it.copy(route = route.await()) }
+            if (_state.value.phase == SharePhase.KEPT && settings.claimNotificationAsk()) _events.send(ShareEvent.AskNotifications)
         }
     }
 

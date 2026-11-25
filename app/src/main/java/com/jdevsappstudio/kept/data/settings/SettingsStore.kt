@@ -38,7 +38,20 @@ class SettingsStore(private val context: Context) {
         }
     }
 
+    /** True only the first time: POST_NOTIFICATIONS is asked once, after the first share (BUILD-SPEC §4). */
+    suspend fun claimNotificationAsk(): Boolean {
+        var first = false
+        context.settings.edit {
+            if (it[NOTIF_ASKED] != true) {
+                it[NOTIF_ASKED] = true
+                first = true
+            }
+        }
+        return first
+    }
+
     private companion object {
+        val NOTIF_ASKED = booleanPreferencesKey("notifications_asked")
         val CLOUD_HELP = booleanPreferencesKey("cloud_help")
         val READS_DAY = intPreferencesKey("cloud_reads_day")
         val READS_COUNT = intPreferencesKey("cloud_reads_count")
