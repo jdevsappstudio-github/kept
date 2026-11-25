@@ -11,8 +11,8 @@ enum class ReportReason(val label: String) {
 /** A prefilled email for the person's mail app (H40: email intent, Kept stays server-free). Nothing goes until they press Send there. */
 data class ReportEmail(val to: String, val subject: String, val body: String) {
     companion object {
-        /** TODO(owner): Kept's support address; the Report button needs it before the Play build. */
-        const val SUPPORT_ADDRESS = "support@example.com"
+        /** Kept's support address (owner, 25 Nov: the studio inbox for now; swap for a Kept-only one later). */
+        const val SUPPORT_ADDRESS = "jdevsappstudio@gmail.com"
         private const val MAX_CHARS = 1_500
 
         /** Only the question, the answer and the reason: never the saves (k-ask). */
