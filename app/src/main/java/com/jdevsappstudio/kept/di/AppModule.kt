@@ -58,6 +58,18 @@ import com.jdevsappstudio.kept.data.capture.Keeper
 import com.jdevsappstudio.kept.data.capture.SaveFilesCopier
 import com.jdevsappstudio.kept.feature.add.AddViewModel
 import com.jdevsappstudio.kept.feature.add.PickedImports
+import com.jdevsappstudio.kept.data.ads.InstantRewardedAds
+import com.jdevsappstudio.kept.data.ads.NoRewardedAds
+import com.jdevsappstudio.kept.data.ads.RewardedAds
+import com.jdevsappstudio.kept.data.config.FirebaseRemoteValues
+import com.jdevsappstudio.kept.data.config.RemoteValues
+import com.jdevsappstudio.kept.data.quota.CloudQuota
+import com.jdevsappstudio.kept.data.quota.DataStoreQuotaStore
+import com.jdevsappstudio.kept.data.quota.QuotaLimitsSource
+import com.jdevsappstudio.kept.data.quota.QuotaStore
+import com.jdevsappstudio.kept.data.quota.RemoteQuotaLimits
+import com.jdevsappstudio.kept.data.quota.SystemQuotaDay
+import com.jdevsappstudio.kept.feature.quota.CloudOutViewModel
 
 val IMAGE_DISPATCHER = named("image")
 val APP_SCOPE = named("appScope")
@@ -66,7 +78,13 @@ val appModule = module {
     // File copy + bitmap decode: at most 2 at once, caps memory (BUILD-SPEC §4).
     single(IMAGE_DISPATCHER) { Dispatchers.IO.limitedParallelism(2) }
     single { ImageLoader(androidContext(), get(IMAGE_DISPATCHER)) }
-    single<ReadModelConfig> { RemoteReadModelConfig(firebaseConfigured = BuildConfig.HAS_FIREBASE) }
+    single<RemoteValues> { FirebaseRemoteValues(firebaseConfigured = BuildConfig.HAS_FIREBASE) }
+    single<ReadModelConfig> { RemoteReadModelConfig(get()) }
+    single<QuotaStore> { DataStoreQuotaStore(androidContext()) }
+    single<QuotaLimitsSource> { RemoteQuotaLimits(get()) }
+    single { CloudQuota(get(), get(), SystemQuotaDay()) }
+    // AdMob comes later; debug builds pay out at once so the bonus path can be checked on the phone.
+    single<RewardedAds> { if (BuildConfig.DEBUG) InstantRewardedAds() else NoRewardedAds() }
     single<CardReader> { FirebaseCardReader(firebaseConfigured = BuildConfig.HAS_FIREBASE, config = get()) }
     single { KeptDatabase.build(androidContext()) }
     single { get<KeptDatabase>().saveDao() }
@@ -89,7 +107,7 @@ val appModule = module {
     }
     single { ReadNotifications(androidContext()) }
     single<BackgroundReads> { WorkBackgroundReads(androidContext(), get()) }
-    single { ReadQueue(get(), get(), get(), get(), get(), get(), get(), get(APP_SCOPE)) }
+    single { ReadQueue(get(), get(), get(), get(), get(), get(), get(), get(), get(APP_SCOPE)) }
     worker { params -> CloudReadWorker(androidContext(), params.get(), get(), get(), get()) }
     single { Snackbars(get(APP_SCOPE)) }
     single { PickedImports(get(), get(), get(APP_SCOPE)) }
@@ -106,5 +124,6 @@ val appModule = module {
     viewModel { EditSaveViewModel(get(), get(), get(), get()) }
     viewModel { CollectionViewModel(get(), get(), get(), get(), get()) }
     viewModel { CollectionNameViewModel(get(), get()) }
+    viewModel { CloudOutViewModel(get(), get(), get()) }
     viewModel { ReaderSpikeViewModel(get(), get()) { File(androidContext().filesDir, "spike") } }
 }

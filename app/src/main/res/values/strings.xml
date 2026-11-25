@@ -93,4 +93,14 @@
     <string name="add_failed">Couldn\'t add those screenshots. Try again.</string>
     <string name="add_already_kept">Already in Kept</string>
     <string name="add_not_a_link">That doesn\'t look like a link</string>
+    <!-- Cloud quota (BUILD-SPEC §11, H57). answers = questions to the cloud; reads = cloud reading of saves. -->
+    <string name="quota_no_ad">No ad right now. Try again in a bit.</string>
+    <plurals name="quota_answers_added">
+        <item quantity="one">%1$d more answer for today</item>
+        <item quantity="other">%1$d more answers for today</item>
+    </plurals>
+    <plurals name="quota_reads_added">
+        <item quantity="one">%1$d more read for today</item>
+        <item quantity="other">%1$d more reads for today</item>
+    </plurals>
 </resources>

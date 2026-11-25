@@ -11,6 +11,8 @@ import com.jdevsappstudio.kept.data.ai.ReadEngine
 import com.jdevsappstudio.kept.data.ai.ReadFailure
 import com.jdevsappstudio.kept.data.ai.ReadResult
 import com.jdevsappstudio.kept.data.files.ImageLoader
+import com.jdevsappstudio.kept.data.quota.CloudMeter
+import com.jdevsappstudio.kept.data.quota.CloudQuota
 import com.jdevsappstudio.kept.data.saves.QueuedSave
 import com.jdevsappstudio.kept.data.saves.SaveLocalDataSource
 import com.jdevsappstudio.kept.data.settings.SettingsStore
@@ -31,8 +33,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 /** Why the queue isn't reading right now (home strip copy). */
 enum class QueuePause { NONE, NEEDS_CONSENT, OFFLINE, IN_BACKGROUND, CLOUD_CAP, NOT_SET_UP }
@@ -50,6 +50,7 @@ class ReadQueue(
     private val routing: ReadRouting,
     private val images: ImageLoader,
     private val settings: SettingsStore,
+    private val quota: CloudQuota,
     private val network: NetworkStatus,
     private val background: BackgroundReads,
     private val scope: CoroutineScope,
@@ -81,6 +82,8 @@ class ReadQueue(
                 foreground,
                 settings.cloudHelp,
                 network.online,
+                // An ad's +10 or midnight turns reads back on: the paused queue restarts by itself.
+                quota.observe(CloudMeter.READS).map { !it.isOut }.distinctUntilChanged(),
                 ::Trigger,
             )
                 // Restart only when an input changes, not on every finished card (that would cut reads short).
@@ -110,9 +113,8 @@ class ReadQueue(
                 ReadRoute.OFFLINE -> return pause(QueuePause.OFFLINE)
                 ReadRoute.NEEDS_CONSENT -> return pause(QueuePause.NEEDS_CONSENT)
             }
-            val today = today()
-            if (engine == ReadEngine.CLOUD && settings.cloudReadsOn(today) >= CLOUD_READS_PER_DAY) {
-                return pause(QueuePause.CLOUD_CAP) // saves wait for tomorrow (H32/H46); a restart re-checks the day
+            if (engine == ReadEngine.CLOUD && quota.left(CloudMeter.READS) <= 0) {
+                return pause(QueuePause.CLOUD_CAP) // saves wait for midnight or an ad (H32/H46/H57)
             }
             _pause.value = QueuePause.NONE
             // Cloud reads waiting: queue the worker now, not when Kept leaves the screen. ProcessLifecycleOwner reports
@@ -128,7 +130,7 @@ class ReadQueue(
                 continue
             }
             when (val outcome = readOne(save, engine)) {
-                Outcome.Done -> if (engine == ReadEngine.CLOUD) settings.countCloudRead(today)
+                Outcome.Done -> if (engine == ReadEngine.CLOUD) quota.use(CloudMeter.READS)
                 is Outcome.Failed -> {
                     val decision = RetryPolicy.decide(outcome.reason, save.attempts, clock())
                     when (decision) {
@@ -148,7 +150,13 @@ class ReadQueue(
         }
     }
 
-    private data class Trigger(val pending: Boolean, val foreground: Boolean, val cloudHelp: Boolean, val online: Boolean)
+    private data class Trigger(
+        val pending: Boolean,
+        val foreground: Boolean,
+        val cloudHelp: Boolean,
+        val online: Boolean,
+        val readsLeft: Boolean,
+    )
 
     private sealed interface Outcome {
         data object Done : Outcome
@@ -202,11 +210,7 @@ class ReadQueue(
 
     private fun ReadEngine.toReadBy() = if (this == ReadEngine.DEVICE) ReadBy.DEVICE else ReadBy.CLOUD
 
-    private fun today(): Int = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE).toInt()
-
     companion object {
         private const val TAG = "ReadQueue"
-        /** H46: 100 a day during judging (until 16 Dec), then back to 30 (H32). One constant. */
-        const val CLOUD_READS_PER_DAY = 100
     }
 }

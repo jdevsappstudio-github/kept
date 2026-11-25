@@ -219,8 +219,6 @@ class FakeSettings : SettingsStore {
     override val cloudHelp = MutableStateFlow(false)
     override suspend fun cloudHelpNow() = cloudHelp.first()
     override suspend fun setCloudHelp(on: Boolean) { cloudHelp.value = on }
-    override suspend fun cloudReadsOn(day: Int) = 0
-    override suspend fun countCloudRead(day: Int) = Unit
     override val listLayout = MutableStateFlow(ListLayout.ROWS)
     override suspend fun setListLayout(layout: ListLayout) { listLayout.value = layout }
     override suspend fun claimNotificationAsk() = false

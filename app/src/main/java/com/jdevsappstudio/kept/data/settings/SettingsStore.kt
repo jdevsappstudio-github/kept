@@ -3,7 +3,6 @@ package com.jdevsappstudio.kept.data.settings
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.jdevsappstudio.kept.core.model.ListLayout
@@ -21,10 +20,6 @@ interface SettingsStore {
     val cloudHelp: Flow<Boolean>
     suspend fun cloudHelpNow(): Boolean
     suspend fun setCloudHelp(on: Boolean)
-
-    /** Cloud reads done on [day] (yyyyMMdd); resets when the day changes. */
-    suspend fun cloudReadsOn(day: Int): Int
-    suspend fun countCloudRead(day: Int)
 
     /** H50: rows (default) or grid, one choice for every save list. */
     val listLayout: Flow<ListLayout>
@@ -62,19 +57,6 @@ class DataStoreSettingsStore(private val context: Context) : SettingsStore {
 
     override suspend fun setCloudHelp(on: Boolean) {
         context.settings.edit { it[CLOUD_HELP] = on }
-    }
-
-    override suspend fun cloudReadsOn(day: Int): Int {
-        val prefs = context.settings.data.first()
-        return if (prefs[READS_DAY] == day) prefs[READS_COUNT] ?: 0 else 0
-    }
-
-    override suspend fun countCloudRead(day: Int) {
-        context.settings.edit {
-            val same = it[READS_DAY] == day
-            it[READS_DAY] = day
-            it[READS_COUNT] = (if (same) it[READS_COUNT] ?: 0 else 0) + 1
-        }
     }
 
     override val listLayout: Flow<ListLayout> = context.settings.data
@@ -122,8 +104,6 @@ class DataStoreSettingsStore(private val context: Context) : SettingsStore {
         const val RECENT_SEP = "\n"
         val NOTIF_ASKED = booleanPreferencesKey("notifications_asked")
         val CLOUD_HELP = booleanPreferencesKey("cloud_help")
-        val READS_DAY = intPreferencesKey("cloud_reads_day")
-        val READS_COUNT = intPreferencesKey("cloud_reads_count")
         val LIST_LAYOUT = stringPreferencesKey("list_layout")
     }
 }

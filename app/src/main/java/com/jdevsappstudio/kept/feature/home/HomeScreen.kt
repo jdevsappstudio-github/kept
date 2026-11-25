@@ -26,6 +26,7 @@ import com.jdevsappstudio.kept.core.designsystem.Kept
 import com.jdevsappstudio.kept.data.queue.QueuePause
 import com.jdevsappstudio.kept.data.queue.ReadRoute
 import com.jdevsappstudio.kept.feature.search.SearchDebug
+import com.jdevsappstudio.kept.feature.quota.QuotaDebug
 import com.jdevsappstudio.kept.feature.add.AddDebug
 import com.jdevsappstudio.kept.feature.spike.ReaderSpikeRoot
 
@@ -52,6 +53,7 @@ fun HomeScreen(state: HomeState, onAction: (HomeAction) -> Unit) {
                     Switch(checked = state.cloudHelp, onCheckedChange = { onAction(HomeAction.SetCloudHelp(it)) })
                 }
                 AddDebug()
+                QuotaDebug()
                 LibraryDebug(state, onAction)
                 SearchDebug()
                 ReaderSpikeRoot()
