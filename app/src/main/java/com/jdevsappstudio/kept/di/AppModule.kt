@@ -73,6 +73,10 @@ import com.jdevsappstudio.kept.feature.quota.CloudOutViewModel
 
 import com.jdevsappstudio.kept.data.ai.CloudAsker
 import com.jdevsappstudio.kept.data.ai.FirebaseCloudAsker
+import com.jdevsappstudio.kept.data.ai.FirebasePageFiller
+import com.jdevsappstudio.kept.data.ai.PageFiller
+import com.jdevsappstudio.kept.data.fill.CloudFillRepository
+import com.jdevsappstudio.kept.data.fill.FillRepository
 import com.jdevsappstudio.kept.data.ask.AskLocalDataSource
 import com.jdevsappstudio.kept.data.ask.AskRepository
 import com.jdevsappstudio.kept.data.ask.CloudAskRepository
@@ -131,7 +135,7 @@ val appModule = module {
     viewModel { SearchViewModel(get(), get<SaveLocalDataSource>().observeCounts(), get(), get(), get(), get(), get()) }
     viewModel { ShelfViewModel(get(), get(), get()) }
     viewModel { ShelvesViewModel(get()) }
-    viewModel { SaveDetailViewModel(get(), get(), get()) }
+    viewModel { SaveDetailViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { EditSaveViewModel(get(), get(), get(), get()) }
     viewModel { CollectionViewModel(get(), get(), get(), get(), get()) }
     viewModel { CollectionNameViewModel(get(), get()) }
@@ -146,5 +150,11 @@ val appModule = module {
     }
     viewModel { AskViewModel(get(), get(), get(), get(), get(), get<NetworkStatus>().online, BuildConfig.VERSION_NAME) }
     viewModel { SentViewModel(get(), get()) }
+    // Fill in with cloud (H59): URL context on a caption-only link, 1 answer.
+    single<PageFiller> { FirebasePageFiller(BuildConfig.HAS_FIREBASE, RemoteReadModelConfig.forFill(get())) }
+    single<FillRepository> {
+        val network = get<NetworkStatus>()
+        CloudFillRepository(get(), get(), get(), get(), get(), network::isOnline, get(APP_SCOPE))
+    }
     viewModel { ReaderSpikeViewModel(get(), get()) { File(androidContext().filesDir, "spike") } }
 }

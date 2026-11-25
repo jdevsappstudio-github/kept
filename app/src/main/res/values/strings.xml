@@ -63,6 +63,16 @@
     <string name="snack_off_shelf">Off the %1$s shelf</string>
     <string name="snack_read_again">Reading it again</string>
     <string name="snack_read_busy">It’s being read right now</string>
+    <!-- Fill in with cloud + Add a screenshot (k-link, H59). Copy open to the UX panel. -->
+    <string name="snack_fill_done">Filled in from the page</string>
+    <string name="snack_fill_unreachable">Couldn’t open that page</string>
+    <string name="snack_add_screenshot">Add a screenshot</string>
+    <string name="snack_cloud_no_answer">Cloud didn’t answer</string>
+    <string name="snack_try_again">Try again</string>
+    <string name="snack_fill_offline">You’re offline. Fill in needs the internet.</string>
+    <string name="snack_shot_reading">Reading it again with the screenshot</string>
+    <string name="snack_shot_too_big">That image is too big to read</string>
+    <string name="snack_shot_failed">Couldn’t open that image</string>
     <string name="snack_already_on_shelf">Already on your %1$s shelf</string>
     <string name="snack_already_here">Already on this save</string>
     <!-- Collections (H55) -->

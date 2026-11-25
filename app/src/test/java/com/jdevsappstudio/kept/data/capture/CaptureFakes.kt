@@ -7,6 +7,7 @@ import com.jdevsappstudio.kept.data.ai.CardDraft
 import com.jdevsappstudio.kept.data.ai.ReadFailure
 import com.jdevsappstudio.kept.data.files.CopyResult
 import com.jdevsappstudio.kept.data.saves.QueuedSave
+import com.jdevsappstudio.kept.data.saves.FillTarget
 import com.jdevsappstudio.kept.data.saves.SaveLocalDataSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -44,6 +45,24 @@ class FakeSaveStore : SaveLocalDataSource {
     override suspend fun saveCard(id: Long, card: CardDraft, readBy: ReadBy, model: String?, now: Long) = Unit
     override suspend fun saveFailure(id: Long, reason: ReadFailure, attempts: Int, retryAt: Long?) = Unit
     override suspend fun delete(id: Long) = Unit
+
+    // Fill in (H59) + Add a screenshot
+    val fillTargets = mutableMapOf<Long, FillTarget>()
+    val filled = mutableListOf<Triple<Long, CardDraft, String>>()
+    val attached = mutableMapOf<Long, String>()
+    /** Ids that already have an image (attach refuses them). */
+    val withImage = mutableSetOf<Long>()
+
+    override suspend fun fillTarget(id: Long): FillTarget? = fillTargets[id]
+    override suspend fun saveFill(id: Long, card: CardDraft, model: String, now: Long) {
+        filled += Triple(id, card, model)
+    }
+    override suspend fun attachImage(id: Long, path: String, sha256: String): Boolean {
+        if (id in withImage) return false
+        attached[id] = path
+        withImage += id
+        return true
+    }
 }
 
 /** ref "img:<hash>[#n]" copies with that hash (#n = another URI, same bytes); "big:…" is too big; "bad:…" fails. */

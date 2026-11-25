@@ -60,6 +60,7 @@ fun HomeScreen(state: HomeState, onAction: (HomeAction) -> Unit) {
                 LibraryDebug(state, onAction)
                 SearchDebug()
                 AskDebug()
+                com.jdevsappstudio.kept.feature.library.detail.FillDebug()
                 ReaderSpikeRoot()
             }
         }

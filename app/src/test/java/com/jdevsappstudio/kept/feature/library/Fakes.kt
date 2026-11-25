@@ -246,3 +246,24 @@ fun UiText.resId(): Int = when (this) {
     is UiText.Plural -> id
     is UiText.Dynamic -> 0
 }
+
+/** Fill in for detail tests: [check] mirrors the real gates on [settings]/[quota]; [fill] pops [outcomes]. */
+class FakeFillRepository(
+    private val settings: SettingsStore,
+    private val quota: com.jdevsappstudio.kept.data.quota.CloudQuota,
+) : com.jdevsappstudio.kept.data.fill.FillRepository {
+    val outcomes = ArrayDeque<com.jdevsappstudio.kept.data.fill.FillOutcome>()
+    val calls = mutableListOf<Long>()
+    var gate: com.jdevsappstudio.kept.data.fill.FillOutcome? = null
+    override val filling = MutableStateFlow<Set<Long>>(emptySet())
+    override suspend fun check(): com.jdevsappstudio.kept.data.fill.FillOutcome? = when {
+        !settings.cloudHelpNow() -> com.jdevsappstudio.kept.data.fill.FillOutcome.NeedsConsent
+        quota.left(com.jdevsappstudio.kept.data.quota.CloudMeter.ANSWERS) <= 0 -> com.jdevsappstudio.kept.data.fill.FillOutcome.OutOfAnswers
+        else -> gate
+    }
+    override suspend fun fill(saveId: Long): com.jdevsappstudio.kept.data.fill.FillOutcome {
+        calls += saveId
+        return outcomes.removeFirst()
+    }
+}
+

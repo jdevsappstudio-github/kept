@@ -16,12 +16,14 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         AskTurnEntity::class, AskRefEntity::class, SentEntity::class,
     ],
     views = [ShelfSaveView::class],
-    version = 4,
+    version = 5,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2, spec = KeptDatabase.V1ToV2::class),
         // v4 (H58): Ask chat + refs + the sent log; new tables only.
         AutoMigration(from = 3, to = 4),
+        // v5 (H59): saves.filledAt for Fill in with cloud.
+        AutoMigration(from = 4, to = 5),
     ],
 )
 abstract class KeptDatabase : RoomDatabase() {

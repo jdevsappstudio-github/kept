@@ -49,6 +49,8 @@ data class SaveEntity(
     val readAt: Long? = null,
     /** Soft delete (v2): set on Delete, cleared by Undo, the row and files go when the snackbar ends (or on next start). */
     val deletedAt: Long? = null,
+    /** v5 (H59): when Fill in with cloud last wrote this card from the linked page. Any later read clears it. */
+    val filledAt: Long? = null,
 )
 
 @Entity(

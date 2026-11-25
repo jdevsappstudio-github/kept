@@ -17,6 +17,16 @@ data class QueuedSave(
     val attempts: Int,
 )
 
+/** What Fill in with cloud needs from one save (H59). */
+data class FillTarget(
+    val id: Long,
+    val url: String,
+    val sharedText: String?,
+    val title: String,
+    /** Fill in only runs on a live, caption-only save that hasn't been filled since its last read. */
+    val canFill: Boolean,
+)
+
 /** The saves table as the share target, queue and screens see it. Every call is main-safe. */
 interface SaveLocalDataSource {
     suspend fun add(saves: List<NewSave>): List<Long>
@@ -49,4 +59,16 @@ interface SaveLocalDataSource {
     suspend fun saveFailure(id: Long, reason: ReadFailure, attempts: Int, retryAt: Long?)
 
     suspend fun delete(id: Long)
+
+    /** Null if the save is gone or has no link. */
+    suspend fun fillTarget(id: Long): FillTarget?
+
+    /**
+     * Fill in with cloud (H59): the page's card replaces title, type, kind, summary, place, date, link and items.
+     * Tags already on the save stay (Kept doesn't know which ones were typed by hand); the page's tags are added.
+     */
+    suspend fun saveFill(id: Long, card: CardDraft, model: String, now: Long)
+
+    /** Add a screenshot (k-link): false if the save is gone or already has an image. */
+    suspend fun attachImage(id: Long, path: String, sha256: String): Boolean
 }

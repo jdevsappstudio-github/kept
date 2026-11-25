@@ -63,4 +63,14 @@ class KeeperTest {
         assertThat(keeper.keepPastedLink("buy oat milk")).isEqualTo(TextKept.NotALink)
         assertThat(store.notes).hasSize(0)
     }
+
+    @Test fun `a screenshot joins a link save and queues it, a refused one leaves no copy behind`() = runTest {
+        assertThat(keeper.attachImage(7, "img:z")).isEqualTo(ImageAttached.QUEUED)
+        assertThat(store.attached[7]).isEqualTo("files/1.jpg")
+        assertThat(keeper.attachImage(7, "img:y")).isEqualTo(ImageAttached.NOT_ALLOWED) // already has one
+        assertThat(copier.deleted).containsExactly("files/2.jpg")
+        assertThat(keeper.attachImage(8, "big:x")).isEqualTo(ImageAttached.TOO_BIG)
+        assertThat(keeper.attachImage(8, "bad:x")).isEqualTo(ImageAttached.UNREADABLE)
+        assertThat(store.attached.keys.toList()).containsExactly(7L)
+    }
 }

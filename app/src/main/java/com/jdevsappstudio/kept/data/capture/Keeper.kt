@@ -39,6 +39,18 @@ data class ImagesKept(
     val kept get() = ids.size + noteIds.size
 }
 
+/** Add a screenshot to a caption-only link (k-link). */
+enum class ImageAttached {
+    /** Copied and back in line: the card is read again with the image, in place. */
+    QUEUED,
+    /** Over the size limit: nothing changed. */
+    TOO_BIG,
+    /** Couldn't open the picked image: nothing changed. */
+    UNREADABLE,
+    /** The save is gone or already has an image. */
+    NOT_ALLOWED,
+}
+
 sealed interface TextKept {
     /** A link, queued to be read. */
     data class Queued(val id: Long) : TextKept
@@ -115,6 +127,22 @@ class Keeper(private val store: SaveLocalDataSource, private val copier: ImageCo
         val url = CaptureText.pastedUrl(clean) ?: return TextKept.NotALink
         return keepLink(NewSave(SaveSource.PASTE, sourceApp = null, sharedText = clean, url = url, imagePath = null))
     }
+
+    /**
+     * k-link 'Add a screenshot': the picked image joins the link save (no duplicate check; it belongs to this save)
+     * and the card is read again with it. The old card stays until the new one lands.
+     */
+    suspend fun attachImage(saveId: Long, ref: String): ImageAttached =
+        when (val copy = copier.copyIn(ref)) {
+            is CopyResult.Copied ->
+                if (store.attachImage(saveId, copy.path, copy.sha256)) ImageAttached.QUEUED
+                else {
+                    copier.delete(copy.path)
+                    ImageAttached.NOT_ALLOWED
+                }
+            CopyResult.TooBig -> ImageAttached.TOO_BIG
+            CopyResult.Failed -> ImageAttached.UNREADABLE
+        }
 
     private suspend fun keepLink(save: NewSave): TextKept {
         store.findDuplicate(contentHash = null, url = save.url)?.let { return TextKept.Duplicate(it) }

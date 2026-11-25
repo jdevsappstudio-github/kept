@@ -76,6 +76,21 @@ class MigrationTest {
         }
     }
 
+    @Test fun v4ToV5() {
+        helper.createDatabase(DB, 4).apply {
+            execSQL(
+                "INSERT INTO saves (id, createdAt, source, status, attempts, nextAttemptAt, title, summary, type, kind, " +
+                    "place, eventDate, link, fullText) VALUES (1, 1, 'SHARE_TEXT', 'READ', 0, 0, 'x', '', 'video', '', '', '', '', '')",
+            )
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(DB, 5, true)
+        db.query("SELECT filledAt FROM saves WHERE id = 1").use {
+            it.moveToFirst()
+            assertThat(it.isNull(0)).isEqualTo(true)
+        }
+    }
+
     private companion object {
         const val DB = "migration-test"
     }

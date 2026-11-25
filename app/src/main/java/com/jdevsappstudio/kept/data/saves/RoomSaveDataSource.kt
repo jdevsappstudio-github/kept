@@ -90,6 +90,32 @@ class RoomSaveDataSource(
         )
     }
 
+    override suspend fun fillTarget(id: Long): FillTarget? {
+        val save = dao.get(id) ?: return null
+        val url = save.url?.takeIf { it.isNotBlank() } ?: return null
+        val canFill = save.deletedAt == null && save.imagePath == null && save.filledAt == null
+        return FillTarget(id, url, save.sharedText, save.title, canFill)
+    }
+
+    override suspend fun saveFill(id: Long, card: CardDraft, model: String, now: Long) {
+        val save = dao.get(id) ?: return // deleted while the page was being read
+        val tags = (dao.tags(id) + CardMapping.tags(card)).distinct()
+        val items = CardMapping.items(card)
+        dao.applyFill(
+            CardRow(
+                id = id, readBy = ReadBy.CLOUD.name, model = model, title = card.title.trim(), summary = card.summary.trim(),
+                type = SaveType.fromWire(card.type).wire, kind = CardMapping.kind(card), place = card.place.trim(),
+                eventDate = card.date.trim(), link = card.link.trim().ifEmpty { save.link }, readAt = now,
+            ),
+            tags = tags,
+            items = items,
+            searchBody = CardMapping.searchBody(card, tags, items, save.sharedText, save.url),
+        )
+    }
+
+    override suspend fun attachImage(id: Long, path: String, sha256: String): Boolean =
+        dao.attachImage(id, path, sha256) == 1
+
     override suspend fun saveFailure(id: Long, reason: ReadFailure, attempts: Int, retryAt: Long?) {
         val status = if (retryAt == null) SaveStatus.NEEDS_LOOK else SaveStatus.QUEUED
         dao.markFailure(id, status.name, reason.name, attempts, retryAt ?: 0)

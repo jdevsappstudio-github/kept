@@ -69,7 +69,7 @@ abstract class SaveDao {
     @Query(
         "UPDATE saves SET status = 'READ', failReason = NULL, readBy = :readBy, model = :model, title = :title, " +
             "summary = :summary, type = :type, kind = :kind, place = :place, eventDate = :eventDate, link = :link, " +
-            "readAt = :readAt WHERE id = :id",
+            "readAt = :readAt, filledAt = NULL WHERE id = :id",
     )
     protected abstract suspend fun updateCard(
         id: Long, readBy: String, model: String?, title: String, summary: String, type: String, kind: String,
@@ -115,6 +115,33 @@ abstract class SaveDao {
         insertFts(SearchFtsEntity(card.id, searchBody))
     }
 
+    @Query("UPDATE saves SET filledAt = :now WHERE id = :id")
+    protected abstract suspend fun setFilled(id: Long, now: Long)
+
+    /** Fill in with cloud (H59): the card from the page, marked so the button goes away. */
+    @Transaction
+    open suspend fun applyFill(card: CardRow, tags: List<String>, items: List<String>, searchBody: String) {
+        applyCard(card, tags, items, searchBody)
+        setFilled(card.id, card.readAt)
+    }
+
+    /**
+     * Add a screenshot (k-link): the link save gets the image and goes back in line. The old card stays until the
+     * new read lands. Only for a live save that has no image yet.
+     */
+    @Query(
+        "UPDATE saves SET imagePath = :path, contentHash = :sha256, thumbPath = NULL, status = 'QUEUED', attempts = 0, " +
+            "nextAttemptAt = 0, failReason = NULL WHERE id = :id AND deletedAt IS NULL AND imagePath IS NULL",
+    )
+    abstract suspend fun attachImage(id: Long, path: String, sha256: String): Int
+
+    /** Debug panel (FillDebug): newest live caption-only links. */
+    @Query(
+        "SELECT id, title, url FROM saves WHERE url IS NOT NULL AND imagePath IS NULL AND deletedAt IS NULL " +
+            "ORDER BY createdAt DESC LIMIT :limit",
+    )
+    abstract suspend fun recentLinks(limit: Int): List<LinkRow>
+
     @Query("DELETE FROM saves WHERE id = :id")
     protected abstract suspend fun deleteSaveRow(id: Long)
 
@@ -140,3 +167,6 @@ data class CardRow(
     val link: String,
     val readAt: Long,
 )
+
+/** Row of [SaveDao.recentLinks]. */
+data class LinkRow(val id: Long, val title: String, val url: String)
