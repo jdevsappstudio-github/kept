@@ -1,0 +1,183 @@
+package com.jdevsappstudio.kept.data.queue
+
+import android.graphics.Bitmap
+import android.net.Uri
+import android.util.Log
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
+import com.jdevsappstudio.kept.core.model.ReadBy
+import com.jdevsappstudio.kept.data.ai.CardReader
+import com.jdevsappstudio.kept.data.ai.ReadEngine
+import com.jdevsappstudio.kept.data.ai.ReadFailure
+import com.jdevsappstudio.kept.data.ai.ReadResult
+import com.jdevsappstudio.kept.data.files.ImageLoader
+import com.jdevsappstudio.kept.data.saves.QueuedSave
+import com.jdevsappstudio.kept.data.saves.SaveLocalDataSource
+import com.jdevsappstudio.kept.data.settings.SettingsStore
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+
+/** Why the queue isn't reading right now (home strip copy). */
+enum class QueuePause { NONE, NEEDS_CONSENT, OFFLINE, IN_BACKGROUND, CLOUD_CAP, NOT_SET_UP }
+
+/**
+ * One loop, app-scoped (BUILD-SPEC §4). Runs while there is something to read and the route allows it:
+ * Nano only in the foreground (AICore blocks background apps); cloud also in the background while the process lives.
+ * One read at a time. Nothing in here can crash the app: every failure becomes a typed retry or "Needs a look".
+ *
+ * Threads: the loop runs on [scope] (Default); Room on its executors; decode on the image dispatcher; AI calls suspend.
+ */
+class ReadQueue(
+    private val store: SaveLocalDataSource,
+    private val reader: CardReader,
+    private val routing: ReadRouting,
+    private val images: ImageLoader,
+    private val settings: SettingsStore,
+    private val network: NetworkStatus,
+    private val scope: CoroutineScope,
+    private val clock: () -> Long = System::currentTimeMillis,
+) {
+    private val _pause = MutableStateFlow(QueuePause.NONE)
+    val pause: StateFlow<QueuePause> = _pause.asStateFlow()
+
+    private val _route = MutableStateFlow<ReadRoute?>(null)
+    val route: StateFlow<ReadRoute?> = _route.asStateFlow()
+
+    private var started = false
+
+    /** Called once from Application.onCreate; returns at once, all work is on [scope]. */
+    fun start() {
+        if (started) return
+        started = true
+        scope.launch {
+            store.requeueInterrupted()
+            val foreground = withContext(Dispatchers.Main.immediate) {
+                ProcessLifecycleOwner.get().lifecycle.currentStateFlow
+            }.map { it.isAtLeast(Lifecycle.State.STARTED) }.distinctUntilChanged()
+            combine(
+                store.observeCounts().map { it.queued > 0 || it.reading > 0 }.distinctUntilChanged(),
+                foreground,
+                settings.cloudHelp,
+                network.online,
+            ) { pending, fg, cloudHelp, online -> if (pending) Trigger(fg, cloudHelp, online) else null }
+                // Restart only when an input changes, not on every finished card (that would cut reads short).
+                .distinctUntilChanged()
+                .collectLatest { t -> if (t != null) drain(t.foreground) else _pause.value = QueuePause.NONE }
+        }
+    }
+
+    private suspend fun drain(foreground: Boolean) {
+        while (true) {
+            val route = routing.current()
+            _route.value = route
+            val engine = when (route) {
+                ReadRoute.DEVICE -> if (foreground) ReadEngine.DEVICE else return pause(QueuePause.IN_BACKGROUND)
+                ReadRoute.CLOUD -> ReadEngine.CLOUD
+                ReadRoute.OFFLINE -> return pause(QueuePause.OFFLINE)
+                ReadRoute.NEEDS_CONSENT -> return pause(QueuePause.NEEDS_CONSENT)
+            }
+            val today = today()
+            if (engine == ReadEngine.CLOUD && settings.cloudReadsOn(today) >= CLOUD_READS_PER_DAY) {
+                return pause(QueuePause.CLOUD_CAP) // saves wait for tomorrow (H32/H46); a restart re-checks the day
+            }
+            _pause.value = QueuePause.NONE
+            val save = store.claimNext(clock())
+            if (save == null) {
+                val due = store.earliestDue() ?: return
+                delay((due - clock()).coerceIn(250, 60_000))
+                continue
+            }
+            when (val outcome = readOne(save, engine)) {
+                Outcome.Done -> if (engine == ReadEngine.CLOUD) settings.countCloudRead(today)
+                is Outcome.Failed -> {
+                    val decision = RetryPolicy.decide(outcome.reason, save.attempts, clock())
+                    when (decision) {
+                        is RetryDecision.Wait -> {
+                            store.saveFailure(save.id, outcome.reason, decision.attempts, decision.at)
+                            if (outcome.reason == ReadFailure.OFFLINE) return pause(QueuePause.OFFLINE)
+                            if (outcome.reason == ReadFailure.QUOTA) return pause(QueuePause.CLOUD_CAP)
+                            if (decision.pauseQueue) delay((decision.at - clock()).coerceIn(0, 60_000))
+                        }
+                        is RetryDecision.GiveUp -> {
+                            store.saveFailure(save.id, outcome.reason, decision.attempts, retryAt = null)
+                            if (decision.stopQueue) return pause(QueuePause.NOT_SET_UP)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private data class Trigger(val foreground: Boolean, val cloudHelp: Boolean, val online: Boolean)
+
+    private sealed interface Outcome {
+        data object Done : Outcome
+        data class Failed(val reason: ReadFailure) : Outcome
+    }
+
+    private suspend fun readOne(save: QueuedSave, engine: ReadEngine): Outcome {
+        var finished = false
+        var bitmap: Bitmap? = null
+        try {
+            bitmap = save.imagePath?.let { images.decodeScaled(Uri.fromFile(File(it))) }
+            val text = listOfNotNull(save.sharedText, save.url).distinct().joinToString("\n").ifBlank { null }
+            if (bitmap == null && text == null) {
+                finished = true
+                return Outcome.Failed(ReadFailure.UNREADABLE)
+            }
+            val result = reader.read(bitmap, text, engine)
+            finished = true
+            return when (result) {
+                is ReadResult.Success -> {
+                    withContext(NonCancellable) {
+                        store.saveCard(save.id, result.card, result.readBy.toReadBy(), result.model, clock())
+                    }
+                    Outcome.Done
+                }
+                is ReadResult.Failure -> {
+                    Log.w(TAG, "read ${save.id} failed: ${result.reason} ${result.detail.orEmpty()}")
+                    Outcome.Failed(result.reason)
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "read ${save.id} crashed", e)
+            finished = true
+            return Outcome.Failed(ReadFailure.UNKNOWN)
+        } finally {
+            bitmap?.recycle()
+            // Cut short (left the screen, inputs changed): back to QUEUED with no try counted.
+            if (!finished) withContext(NonCancellable) { store.requeue(save.id) }
+        }
+    }
+
+    private fun pause(why: QueuePause) {
+        _pause.value = why
+    }
+
+    private fun ReadEngine.toReadBy() = if (this == ReadEngine.DEVICE) ReadBy.DEVICE else ReadBy.CLOUD
+
+    private fun today(): Int = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE).toInt()
+
+    companion object {
+        private const val TAG = "ReadQueue"
+        /** H46: 100 a day during judging (until 16 Dec), then back to 30 (H32). One constant. */
+        const val CLOUD_READS_PER_DAY = 100
+    }
+}

@@ -17,4 +17,9 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    companion object {
+        /** Opened from the share sheet ("Open it" / "Add a title"); the detail screen picks it up once it exists. */
+        const val EXTRA_SAVE_ID = "save_id"
+    }
 }

@@ -1,4 +1,39 @@
 <resources>
     <string name="app_name">Kept</string>
     <string name="share_label">Keep in Kept</string>
+
+    <!-- Share sheet (k-shared, k-shared-cant) -->
+    <plurals name="share_keeping">
+        <item quantity="one">Keeping it…</item>
+        <item quantity="other">Keeping %1$d…</item>
+    </plurals>
+    <string name="share_progress">%1$d of %2$d</string>
+    <plurals name="share_kept">
+        <item quantity="one">Kept it</item>
+        <item quantity="other">Kept %1$d</item>
+    </plurals>
+    <string name="share_already">Already in Kept</string>
+    <string name="share_note">Kept it as a note</string>
+    <string name="share_failed">Couldn\'t keep that</string>
+    <string name="share_failed_body">The other app didn\'t hand it over. Try sharing it again.</string>
+    <string name="share_route_device">Reading on this phone. You can keep scrolling.</string>
+    <string name="share_route_cloud">Reading with Gemini in the cloud. You can keep scrolling.</string>
+    <string name="share_route_offline">Kept. Read when you\'re back online.</string>
+    <string name="share_route_consent">Saved on this phone. Open Kept to choose how it\'s read.</string>
+    <string name="share_already_body">Nothing was added twice.</string>
+    <string name="share_note_text">Kept can\'t read plain text yet. It\'s saved as a note you can search.</string>
+    <string name="share_note_big">That image is over 20 MB, so it\'s saved as a note.</string>
+    <plurals name="share_also_dupes">
+        <item quantity="one">%1$d was already in Kept.</item>
+        <item quantity="other">%1$d were already in Kept.</item>
+    </plurals>
+    <plurals name="share_also_unreadable">
+        <item quantity="one">%1$d couldn\'t be opened.</item>
+        <item quantity="other">%1$d couldn\'t be opened.</item>
+    </plurals>
+    <string name="share_also_cap">Only %1$d at a time: share the other %2$d again.</string>
+    <string name="share_open_kept">Open Kept</string>
+    <string name="share_open_it">Open it</string>
+    <string name="share_add_title">Add a title</string>
+    <string name="share_done">Done</string>
 </resources>

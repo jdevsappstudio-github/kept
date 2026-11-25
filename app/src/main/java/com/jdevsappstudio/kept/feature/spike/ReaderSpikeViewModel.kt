@@ -41,7 +41,8 @@ sealed interface ReaderSpikeAction {
 class ReaderSpikeViewModel(
     private val reader: CardReader,
     private val images: ImageLoader,
-    private val testDir: File,
+    /** Resolved off the main thread (Context.filesDir touches the disk). */
+    private val testDir: () -> File,
 ) : ViewModel() {
 
     private var testIndex = 0
@@ -61,9 +62,9 @@ class ReaderSpikeViewModel(
             }
             is ReaderSpikeAction.SetPreset -> _state.update { it.copy(preset = action.preset) }
             ReaderSpikeAction.NextTestFile -> viewModelScope.launch {
-                val files = withContext(Dispatchers.IO) { testDir.listFiles()?.filter { it.isFile }?.sortedBy { it.name }.orEmpty() }
+                val files = withContext(Dispatchers.IO) { testDir().listFiles()?.filter { it.isFile }?.sortedBy { it.name }.orEmpty() }
                 if (files.isEmpty()) {
-                    _state.update { it.copy(fileName = "No files in ${testDir.path}") }
+                    _state.update { it.copy(fileName = "No files in files/spike") }
                     return@launch
                 }
                 val file = files[testIndex++ % files.size]
