@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -61,6 +60,8 @@ data class AskState(
 sealed interface AskAction {
     data class OnInputChange(val text: String) : AskAction
     data object OnSend : AskAction
+    /** Back from k-cloud-out after a watched ad: the held question goes (k-ad-rewarded → k-ask). */
+    data object OnAnswersGranted : AskAction
     data class OnStarter(val question: String) : AskAction
     data class OnRetry(val turnId: Long) : AskAction
     data object OnClearChat : AskAction
@@ -79,7 +80,7 @@ sealed interface AskAction {
 sealed interface AskEvent {
     data class OpenSave(val saveId: Long) : AskEvent
     data class OpenSent(val sentId: Long) : AskEvent
-    /** 0 answers left: k-cloud-out. After an ad its Root sets [AskViewModel.KEY_ANSWERS_GRANTED] here and the question sends. */
+    /** 0 answers left: k-cloud-out. After an ad the Root sends [AskAction.OnAnswersGranted] and the question goes. */
     data object OpenCloudOut : AskEvent
     data class SendReport(val email: ReportEmail) : AskEvent
     /** Not now on k-consent: back where the person came from; nothing sent. */
@@ -142,19 +143,13 @@ class AskViewModel(
 
     init {
         viewModelScope.launch { repo.recover() }
-        // Back from k-cloud-out after a watched ad: the held question goes (k-ad-rewarded → k-ask).
-        viewModelScope.launch {
-            savedStateHandle.getStateFlow(KEY_ANSWERS_GRANTED, false).filter { it }.collect {
-                savedStateHandle[KEY_ANSWERS_GRANTED] = false
-                pending?.let { send(it) }
-            }
-        }
     }
 
     fun onAction(action: AskAction) {
         when (action) {
             is AskAction.OnInputChange -> setInput(action.text)
             AskAction.OnSend -> send(input.value)
+            AskAction.OnAnswersGranted -> pending?.let { send(it) }
             is AskAction.OnStarter -> send(action.question)
             is AskAction.OnRetry -> retry(action.turnId)
             AskAction.OnClearChat -> if (!state.value.sending) viewModelScope.launch { repo.clear() }
@@ -243,7 +238,6 @@ class AskViewModel(
     companion object {
         /** Prefill from search's 'Ask about these' / k-search-tag. */
         const val ARG_QUESTION = "question"
-        const val KEY_ANSWERS_GRANTED = "answersGranted"
         private const val KEY_INPUT = "input"
         private const val KEY_PENDING = "pending"
     }

@@ -38,6 +38,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.toRoute
+import com.jdevsappstudio.kept.feature.quota.CloudOutRoot
 import com.jdevsappstudio.kept.feature.add.AddRoot
 import com.jdevsappstudio.kept.feature.ask.AskRoot
 import com.jdevsappstudio.kept.feature.add.HowToRoot
@@ -105,11 +106,14 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
                     onOpenAsk = { nav.navigate(AskRoute(question = it)) },
                 )
             }
-            composable<AskRoute> {
+            composable<AskRoute> { entry ->
+                val granted by entry.savedStateHandle.getStateFlow(KEY_ANSWERS_GRANTED, false).collectAsState()
                 AskRoot(
                     onOpenSave = { nav.navigate(SaveDetailRoute(it)) },
                     onOpenSent = { nav.navigate(SentRoute(it)) },
-                    onOpenCloudOut = { nav.navigate(CloudOutRoute) },
+                    onOpenCloudOut = { nav.navigate(CloudOutRoute()) },
+                    answersGranted = granted,
+                    onGrantConsumed = { entry.savedStateHandle[KEY_ANSWERS_GRANTED] = false },
                     onClose = { nav.popBackStack() },
                 )
             }
@@ -131,11 +135,14 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
             composable<ShelvesRoute> {
                 ShelvesRoot(onBack = { nav.popBackStack() }, onOpenShelf = { nav.navigate(ShelfRoute(it)) })
             }
-            composable<SaveDetailRoute> {
+            composable<SaveDetailRoute> { entry ->
+                val granted by entry.savedStateHandle.getStateFlow(KEY_ANSWERS_GRANTED, false).collectAsState()
                 SaveDetailRoot(
                     onBack = { nav.popBackStack() },
                     onEdit = { nav.navigate(EditSaveRoute(longArrayOf(it))) },
-                    onOpenCloudOut = { nav.navigate(CloudOutRoute) },
+                    onOpenCloudOut = { nav.navigate(CloudOutRoute()) },
+                    answersGranted = granted,
+                    onGrantConsumed = { entry.savedStateHandle[KEY_ANSWERS_GRANTED] = false },
                 )
             }
             // k-organize: a sheet over the screen it was opened from, so it lives in a dialog destination.
@@ -150,7 +157,18 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
                     onCreatedConsumed = { entry.savedStateHandle[KEY_CREATED_COLLECTION] = null },
                 )
             }
-            composable<CloudOutRoute> { Stub("Out of cloud answers", nav) }
+            // k-cloud-out: a sheet over Ask / a save's detail. After a paid-out ad the caller's held question or fill-in goes.
+            dialog<CloudOutRoute>(
+                dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+            ) {
+                CloudOutRoot(
+                    onGranted = {
+                        nav.previousBackStackEntry?.savedStateHandle?.set(KEY_ANSWERS_GRANTED, true)
+                        nav.popBackStack()
+                    },
+                    onClose = { nav.popBackStack() },
+                )
+            }
             composable<CollectionRoute> { entry ->
                 val id = entry.toRoute<CollectionRoute>().collectionId
                 CollectionRoot(
@@ -208,6 +226,9 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
         }
     }
 }
+
+/** k-cloud-out tells Ask / a save's detail that an ad paid out, so the held question or fill-in goes (previous entry). */
+const val KEY_ANSWERS_GRANTED = "answersGranted"
 
 /** k-newcol hands a new collection's id back to the edit sheet under this key (set on the previous entry). */
 const val KEY_CREATED_COLLECTION = "createdCollection"

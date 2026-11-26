@@ -60,7 +60,6 @@ import com.jdevsappstudio.kept.feature.add.AddViewModel
 import com.jdevsappstudio.kept.feature.add.HowToViewModel
 import com.jdevsappstudio.kept.feature.add.ReadingViewModel
 import com.jdevsappstudio.kept.feature.add.PickedImports
-import com.jdevsappstudio.kept.data.ads.InstantRewardedAds
 import com.jdevsappstudio.kept.data.ads.NoRewardedAds
 import com.jdevsappstudio.kept.data.ads.RewardedAds
 import com.jdevsappstudio.kept.data.config.FirebaseRemoteValues
@@ -102,7 +101,7 @@ val appModule = module {
     single<QuotaLimitsSource> { RemoteQuotaLimits(get()) }
     single { CloudQuota(get(), get(), SystemQuotaDay()) }
     // AdMob comes later; debug builds pay out at once so the bonus path can be checked on the phone.
-    single<RewardedAds> { if (BuildConfig.DEBUG) InstantRewardedAds() else NoRewardedAds() }
+    single<RewardedAds> { NoRewardedAds() } // H66: no ad in the MVP; InstantRewardedAds checks the ad path by hand
     single<CardReader> { FirebaseCardReader(firebaseConfigured = BuildConfig.HAS_FIREBASE, config = get()) }
     single { KeptDatabase.build(androidContext()) }
     single { get<KeptDatabase>().saveDao() }
@@ -153,7 +152,7 @@ val appModule = module {
     viewModel { EditSaveViewModel(get(), get(), get(), get()) }
     viewModel { CollectionViewModel(get(), get(), get(), get(), get()) }
     viewModel { CollectionNameViewModel(get(), get()) }
-    viewModel { CloudOutViewModel(get(), get(), get()) }
+    viewModel { CloudOutViewModel(get(), get(), get(), adsOn = get<RewardedAds>().available) }
     // Ask (H58) + the sent log behind every Cloud chip (k-sent).
     single<SentLogLocalDataSource> { RoomSentLogDataSource(get<KeptDatabase>().sentDao()) }
     single<AskLocalDataSource> { RoomAskDataSource(get<KeptDatabase>().askDao()) }

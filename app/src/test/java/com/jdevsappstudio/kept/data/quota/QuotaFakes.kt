@@ -28,5 +28,5 @@ class FakeRemoteValues(private val values: Map<String, String> = emptyMap()) : R
 fun testQuota(
     store: QuotaStore = FakeQuotaStore(),
     day: QuotaDay = FakeQuotaDay(),
-    limits: QuotaLimits = QuotaLimits(),
+    limits: QuotaLimits = QuotaLimits(answersPerDay = 5), // the real users' 5 (H17); the judged build's 20 is H66
 ) = CloudQuota(store, { limits }, day)

@@ -56,6 +56,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -112,9 +113,18 @@ fun SaveDetailRoot(
     onBack: () -> Unit,
     onEdit: (Long) -> Unit,
     onOpenCloudOut: () -> Unit,
+    /** k-cloud-out paid out (set on this back-stack entry by the NavHost); [onGrantConsumed] clears it. */
+    answersGranted: Boolean = false,
+    onGrantConsumed: () -> Unit = {},
     viewModel: SaveDetailViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    LaunchedEffect(answersGranted) {
+        if (answersGranted) {
+            onGrantConsumed()
+            viewModel.onAction(SaveDetailAction.OnAnswersGranted)
+        }
+    }
     val context = LocalContext.current
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         viewModel.onAction(SaveDetailAction.OnScreenshotPicked(uri?.toString()))

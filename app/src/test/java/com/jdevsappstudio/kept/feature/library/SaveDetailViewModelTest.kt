@@ -193,7 +193,7 @@ class SaveDetailViewModelTest {
 
             quota.grantAd(CloudMeter.ANSWERS)
             fill.outcomes += FillOutcome.Filled
-            handle[SaveDetailViewModel.KEY_ANSWERS_GRANTED] = true
+            vm.onAction(SaveDetailAction.OnAnswersGranted)
             assertThat(fill.calls).containsExactly(1L)
         }
     }

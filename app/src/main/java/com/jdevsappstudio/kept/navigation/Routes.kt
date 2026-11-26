@@ -32,6 +32,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object HowToRoute
 @Serializable data object SettingsRoute
 @Serializable data object NeedLookRoute
-@Serializable data object CloudOutRoute
+/** k-cloud-out: CloudOutViewModel.ARG_METER = "meter" (a CloudMeter name; reads come from Needs a look). */
+@Serializable data class CloudOutRoute(val meter: String = "ANSWERS")
 /** k-sent, opened at one request from an answer's Cloud chip (null = the whole log, from Privacy). */
 @Serializable data class SentRoute(val sentId: Long? = null)

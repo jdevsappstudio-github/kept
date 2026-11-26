@@ -100,10 +100,19 @@ fun AskRoot(
     onOpenSave: (Long) -> Unit,
     onOpenSent: (Long) -> Unit,
     onOpenCloudOut: () -> Unit,
+    /** k-cloud-out paid out (set on this back-stack entry by the NavHost); [onGrantConsumed] clears it. */
+    answersGranted: Boolean = false,
+    onGrantConsumed: () -> Unit = {},
     onClose: () -> Unit,
     viewModel: AskViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    LaunchedEffect(answersGranted) {
+        if (answersGranted) {
+            onGrantConsumed()
+            viewModel.onAction(AskAction.OnAnswersGranted)
+        }
+    }
     val context = LocalContext.current
     ObserveAsEvents(viewModel.events) { event ->
         when (event) {
