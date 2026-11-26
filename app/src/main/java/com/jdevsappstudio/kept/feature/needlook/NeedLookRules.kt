@@ -60,6 +60,7 @@ object NeedLookRules {
         pause == QueuePause.OFFLINE -> "Waiting for a connection"
         pause == QueuePause.NEEDS_CONSENT -> "Waiting: cloud help is off"
         pause == QueuePause.NOT_SET_UP -> "Waiting: reading isn’t set up"
+        pause == QueuePause.HELD -> "Paused · Resume on Home"
         row.ahead == 0 -> "Next in line"
         else -> "Waiting in line · ${row.ahead} ahead"
     }
@@ -87,7 +88,7 @@ object NeedLookRules {
                 "Reading isn’t set up",
                 "$saves kept and will be read once this version can reach Gemini.",
             )
-            QueuePause.IN_BACKGROUND, QueuePause.NONE -> null
+            QueuePause.IN_BACKGROUND, QueuePause.NONE, QueuePause.HELD -> null
         }
     }
 

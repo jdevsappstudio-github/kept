@@ -38,7 +38,8 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /** Why the queue isn't reading right now (home strip copy). */
-enum class QueuePause { NONE, NEEDS_CONSENT, OFFLINE, IN_BACKGROUND, CLOUD_CAP, NOT_SET_UP }
+/** Why the queue isn't reading. HELD = the person tapped Pause on Home (in memory only: a restart reads again). */
+enum class QueuePause { NONE, NEEDS_CONSENT, OFFLINE, IN_BACKGROUND, CLOUD_CAP, NOT_SET_UP, HELD }
 
 /**
  * One loop, app-scoped (BUILD-SPEC §4). Runs while there is something to read and the route allows it:
@@ -70,6 +71,13 @@ class ReadQueue(
     /** Kept (any of its activities) is on screen. The cloud worker hides its notice while this is true. */
     val foreground: StateFlow<Boolean> = _foreground.asStateFlow()
 
+    private val _held = MutableStateFlow(false)
+
+    /** Home's Pause / Resume on a big pick. Pausing cuts the current read short; that save goes back to the queue. */
+    fun hold(on: Boolean) {
+        _held.value = on
+    }
+
     private var started = false
 
     /** Called once from Application.onCreate; returns at once, all work is on [scope]. */
@@ -90,14 +98,17 @@ class ReadQueue(
                 quota.observe(CloudMeter.READS).map { !it.isOut }.distinctUntilChanged(),
                 ::Trigger,
             )
+                .combine(_held) { t, held -> t.copy(held = held) }
                 // Restart only when an input changes, not on every finished card (that would cut reads short).
                 .distinctUntilChanged()
                 .collectLatest { t ->
                     if (t.foreground) background.clearNotice()
                     if (!t.pending) {
                         _pause.value = QueuePause.NONE
+                        _held.value = false // nothing left to hold: the next share reads straight away
                         return@collectLatest
                     }
+                    if (t.held) return@collectLatest pause(QueuePause.HELD)
                     drain(t.foreground)
                 }
         }
@@ -160,6 +171,7 @@ class ReadQueue(
         val cloudHelp: Boolean,
         val online: Boolean,
         val readsLeft: Boolean,
+        val held: Boolean = false,
     )
 
     private sealed interface Outcome {

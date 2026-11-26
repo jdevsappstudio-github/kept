@@ -94,4 +94,12 @@ class DetailRulesTest {
         assertThat(DetailRules.savedLine(save(SaveType.OTHER, source = SaveSource.PICKER), LocalDate.of(2027, 1, 2), zone))
             .isEqualTo("Saved 18 Nov 2026 from a screenshot")
     }
+
+    @Test
+    fun `reel copy only for reels and shorts, not a news link`() {
+        assertThat(DetailRules.isReel("https://www.instagram.com/reel/abc/")).isTrue()
+        assertThat(DetailRules.isReel("https://youtube.com/shorts/xyz")).isTrue()
+        assertThat(DetailRules.isReel("https://www.bbc.com/news/articles/c123")).isFalse()
+        assertThat(DetailRules.isReel(null)).isFalse()
+    }
 }

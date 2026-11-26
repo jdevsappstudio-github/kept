@@ -11,7 +11,10 @@ enum class ReadsWith { DEVICE, CLOUD, UNKNOWN }
 /** One status line under the home header (k-home note: shown only when it applies, in this order). */
 sealed interface HomeLine {
     /** 'Reading 3 of 12 · On this phone'; [current]/[total] count this batch only, not the whole library. */
-    data class Reading(val current: Int, val total: Int, val with: ReadsWith) : HomeLine
+    data class Reading(val current: Int, val total: Int, val with: ReadsWith) : HomeLine {
+        /** '· Pause' on a big pick only (owner 26 Nov: 10 or more in this batch). */
+        val canPause: Boolean get() = total >= PAUSE_FROM
+    }
 
     /** '4 waiting · read when you're back online' etc.; [pause] NONE = waiting for a retry ('trying again soon'). */
     data class Waiting(val count: Int, val pause: QueuePause) : HomeLine
@@ -23,6 +26,9 @@ sealed interface HomeLine {
     data class ReadsLeft(val left: Int, val total: Int) : HomeLine
 }
 
+/** Batch size from which the reading line offers Pause. */
+const val PAUSE_FROM = 10
+
 object HomeLines {
 
     /** Why saves wait, after 'N waiting · ' (home and k-reading). */
@@ -33,6 +39,7 @@ object HomeLines {
         QueuePause.CLOUD_CAP -> "today's cloud reads are used up"
         QueuePause.NOT_SET_UP -> "reading isn't set up"
         QueuePause.NONE -> "trying again soon"
+        QueuePause.HELD -> "paused"
     }
 
     fun readsWith(route: ReadRoute?, cloudHelp: Boolean): ReadsWith = when (route) {

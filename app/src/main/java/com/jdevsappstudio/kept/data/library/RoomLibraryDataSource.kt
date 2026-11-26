@@ -6,6 +6,7 @@ import androidx.paging.PagingData
 import androidx.paging.map
 import androidx.room.withTransaction
 import com.jdevsappstudio.kept.core.model.AddItemResult
+import com.jdevsappstudio.kept.core.model.NearShelf
 import com.jdevsappstudio.kept.core.model.Save
 import com.jdevsappstudio.kept.core.model.SaveFilter
 import com.jdevsappstudio.kept.core.model.SaveItem
@@ -91,6 +92,9 @@ class RoomLibraryDataSource(
                 },
             )
         }.distinctUntilChanged()
+
+    override fun observeNearShelf(): Flow<NearShelf?> =
+        dao.observeNearShelf().map { r -> r?.let { NearShelf(ShelfOrder.title(it.kind, it.name), it.saves) } }.distinctUntilChanged()
 
     override fun observeCountSince(since: Long): Flow<Int> = dao.observeCountSince(since).distinctUntilChanged()
 

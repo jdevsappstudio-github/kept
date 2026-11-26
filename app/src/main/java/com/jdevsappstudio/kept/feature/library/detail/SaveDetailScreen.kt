@@ -82,6 +82,7 @@ import com.jdevsappstudio.kept.core.designsystem.CardShape
 import com.jdevsappstudio.kept.core.designsystem.Kept
 import com.jdevsappstudio.kept.core.designsystem.KeptIconButton
 import com.jdevsappstudio.kept.core.designsystem.PillShape
+import com.jdevsappstudio.kept.core.model.ReadBy
 import com.jdevsappstudio.kept.core.designsystem.RouteBadge
 import com.jdevsappstudio.kept.core.designsystem.SaveThumb
 import com.jdevsappstudio.kept.core.designsystem.SectionLabel
@@ -113,6 +114,7 @@ fun SaveDetailRoot(
     onBack: () -> Unit,
     onEdit: (Long) -> Unit,
     onOpenCloudOut: () -> Unit,
+    onOpenSent: (Long?) -> Unit = {},
     /** k-cloud-out paid out (set on this back-stack entry by the NavHost); [onGrantConsumed] clears it. */
     answersGranted: Boolean = false,
     onGrantConsumed: () -> Unit = {},
@@ -135,6 +137,7 @@ fun SaveDetailRoot(
             SaveDetailEvent.PickScreenshot ->
                 picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             SaveDetailEvent.OpenCloudOut -> onOpenCloudOut()
+            is SaveDetailEvent.OpenSent -> onOpenSent(event.sentId)
         }
     }
     SaveDetailScreen(
@@ -326,7 +329,7 @@ private fun Header(save: Save, today: LocalDate, zone: ZoneId, onOpenLink: (Stri
                     .padding(horizontal = 8.dp, vertical = 3.dp),
             )
         }
-        RouteBadge(save.readBy, save.example, Modifier.padding(top = 8.dp))
+        DetailRouteBadge(save, onAction, Modifier.padding(top = 8.dp))
         Text(
             save.displayTitle(),
             style = MaterialTheme.typography.displaySmall.copy(fontSize = 28.sp, lineHeight = 33.sp),
@@ -538,6 +541,7 @@ private fun SecondaryButton(label: String, icon: ImageVector?, onClick: () -> Un
 /** k-link (H59): a link that came with only its caption. */
 @Composable
 private fun LinkBody(save: Save, link: LinkFill, onAction: (SaveDetailAction) -> Unit) {
+    val reel = DetailRules.isReel(save.url)
     Column(Modifier.padding(top = 8.dp)) {
         Row(
             Modifier.fillMaxWidth().clip(CardShape).background(MaterialTheme.colorScheme.surface).padding(12.dp),
@@ -547,14 +551,14 @@ private fun LinkBody(save: Save, link: LinkFill, onAction: (SaveDetailAction) ->
             Column(Modifier.padding(start = 12.dp).weight(1f)) {
                 Text(save.displayTitle(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(
-                    "${shortLink(save.url.orEmpty())} · caption only",
+                    "${shortLink(save.url.orEmpty())} · ${if (reel) "caption only" else "preview only"}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp),
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 6.dp)) {
                     TagPill(save.type.label, icon = typeIcon(save.type))
-                    RouteBadge(save.readBy, save.example)
+                    DetailRouteBadge(save, onAction)
                 }
             }
         }
@@ -563,9 +567,10 @@ private fun LinkBody(save: Save, link: LinkFill, onAction: (SaveDetailAction) ->
         ) {
             Icon(Icons.Outlined.Info, contentDescription = null, tint = Kept.colors.wait, modifier = Modifier.size(22.dp))
             Column(Modifier.padding(start = 10.dp)) {
-                Text("Kept could only read the caption", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                Text(if (reel) "Kept could only read the caption" else "Kept could only read the link's preview", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
                 Text(
-                    "Links from reels share very little. Add a screenshot of the reel and Kept will read what's on it.",
+                    if (reel) "Links from reels share very little. Add a screenshot of the reel and Kept will read what's on it."
+                    else "This link shared very little. Add a screenshot of the page and Kept will read what's on it.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -597,6 +602,16 @@ private fun LinkBody(save: Save, link: LinkFill, onAction: (SaveDetailAction) ->
             modifier = Modifier.fillMaxWidth().padding(top = 12.dp, start = 8.dp, end = 8.dp),
         )
     }
+}
+
+/** Who read it; a filled-in card counts as Cloud (H59). A Cloud chip opens k-sent at that request (H67). */
+@Composable
+private fun DetailRouteBadge(save: Save, onAction: (SaveDetailAction) -> Unit, modifier: Modifier = Modifier) {
+    val readBy = if (save.filledAt != null) ReadBy.CLOUD else save.readBy
+    val tap = if (readBy == ReadBy.CLOUD && !save.example) {
+        Modifier.clip(PillShape).clickable(role = Role.Button, onClickLabel = "See what was sent") { onAction(SaveDetailAction.OnCloudChipClick) }
+    } else Modifier
+    RouteBadge(readBy, save.example, modifier.then(tap))
 }
 
 /** 'instagram.com/reel/…' */

@@ -61,7 +61,7 @@ private fun FillDebugSave(id: Long, sent: SentLogLocalDataSource) {
     val vm: SaveDetailViewModel = viewModel(key = "fill-debug-$id") {
         SaveDetailViewModel(
             SavedStateHandle(mapOf(SaveDetailViewModel.ARG_ID to id)),
-            koin.get(), koin.get(), koin.get(), koin.get(), koin.get(), koin.get(),
+            koin.get(), koin.get(), koin.get(), koin.get(), koin.get(), koin.get(), sent,
         )
     }
     val state by vm.state.collectAsStateWithLifecycle()

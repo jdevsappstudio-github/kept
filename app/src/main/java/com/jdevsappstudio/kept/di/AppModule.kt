@@ -152,6 +152,7 @@ val appModule = module {
             ready = homeReady(settings, get<CardReader>()::deviceModelState, get()),
             reads = get<CloudQuota>().observe(CloudMeter.READS),
             examples = get(),
+            holdReading = queue::hold,
         )
     }
     // Onboarding (H70).
@@ -183,7 +184,7 @@ val appModule = module {
     viewModel { SearchViewModel(get(), get<SaveLocalDataSource>().observeCounts(), get(), get(), get(), get(), get()) }
     viewModel { ShelfViewModel(get(), get(), get()) }
     viewModel { ShelvesViewModel(get()) }
-    viewModel { SaveDetailViewModel(get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { SaveDetailViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { EditSaveViewModel(get(), get(), get(), get()) }
     viewModel { CollectionViewModel(get(), get(), get(), get(), get()) }
     viewModel { CollectionNameViewModel(get(), get()) }

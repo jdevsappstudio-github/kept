@@ -18,6 +18,16 @@ import java.util.Locale
 /** Detail layout rules (k-recipe, k-movies, k-place, k-date, k-link), pure so a panel change is one edit. */
 object DetailRules {
 
+    /** k-link copy: reels/shorts share only a caption; any other page is 'the link's preview'. */
+    fun isReel(url: String?): Boolean {
+        val u = url?.lowercase() ?: return false
+        return REEL_MARKS.any { it in u }
+    }
+
+    private val REEL_MARKS = listOf(
+        "instagram.com/reel", "instagram.com/p/", "tiktok.com/", "youtube.com/shorts", "facebook.com/reel", "fb.watch/",
+    )
+
     /** k-movies: the items list shows at 2+ items; a recipe's items are its ingredients and show from 1. */
     fun showsItems(type: SaveType, items: List<SaveItem>): Boolean =
         if (type == SaveType.RECIPE) items.isNotEmpty() else items.size >= 2

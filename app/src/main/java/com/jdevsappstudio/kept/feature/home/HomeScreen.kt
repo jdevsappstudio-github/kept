@@ -80,6 +80,7 @@ import com.jdevsappstudio.kept.core.designsystem.card
 import com.jdevsappstudio.kept.core.designsystem.shelfGround
 import com.jdevsappstudio.kept.core.designsystem.typeIcon
 import com.jdevsappstudio.kept.core.designsystem.typeTint
+import com.jdevsappstudio.kept.core.model.NearShelf
 import com.jdevsappstudio.kept.core.model.QueueCounts
 import com.jdevsappstudio.kept.core.model.ReadBy
 import com.jdevsappstudio.kept.core.model.Save
@@ -90,6 +91,7 @@ import com.jdevsappstudio.kept.core.model.SaveType
 import com.jdevsappstudio.kept.core.model.Shelf
 import com.jdevsappstudio.kept.core.model.TypeChip
 import com.jdevsappstudio.kept.core.presentation.ObserveAsEvents
+import com.jdevsappstudio.kept.data.queue.QueuePause
 import com.jdevsappstudio.kept.feature.add.AddDebug
 import com.jdevsappstudio.kept.feature.library.detail.FillDebug
 import com.jdevsappstudio.kept.feature.quota.QuotaDebug
@@ -160,7 +162,7 @@ fun HomeScreen(state: HomeState, onAction: (HomeAction) -> Unit) {
                 item(key = "chips") { TypeChips(state.chips, state.total, onAction) }
                 state.hero?.let { hero -> item(key = "hero") { HeroCard(hero) { onAction(HomeAction.OnSaveClick(hero.id)) } } }
                 item(key = "shelves") {
-                    if (state.isEarly) EarlyShelves() else Shelves(state.shelves, state.allShelves, onAction)
+                    if (state.isEarly) EarlyShelves(state.nearShelf) else Shelves(state.shelves, state.allShelves, onAction)
                 }
                 item(key = "collections") { Collections(state.collections, onAction) }
                 state.suggestion?.let { s -> item(key = "suggestion") { SuggestionCard(s.name, s.saves, onAction) } }
@@ -229,9 +231,36 @@ private fun StatusLines(lines: List<HomeLine>, examples: Int, onAction: (HomeAct
             }
             // Waiting saves are listed on Needs a look too (k-failed-cloud), so both lines open it.
             val tap = if (line is HomeLine.NeedLook || line is HomeLine.Waiting) Modifier.clickable(role = Role.Button) { onAction(HomeAction.OnNeedLookClick) } else Modifier
-            Text(text, style = MaterialTheme.typography.labelMedium, color = color, modifier = tap.heightIn(min = 24.dp))
+            // Big pick: '· Pause' while reading, '· Resume' once held (in memory; a restart reads again).
+            val link = when {
+                line is HomeLine.Reading && line.canPause -> "Pause" to false
+                line is HomeLine.Waiting && line.pause == QueuePause.HELD -> "Resume" to true
+                else -> null
+            }
+            if (link == null) {
+                Text(text, style = MaterialTheme.typography.labelMedium, color = color, modifier = tap.heightIn(min = 24.dp))
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text, style = MaterialTheme.typography.labelMedium, color = color, modifier = tap)
+                    Text(" · ", style = MaterialTheme.typography.labelMedium, color = color)
+                    StatusLink(link.first, if (link.second) "Resume reading" else "Pause reading") {
+                        onAction(HomeAction.SetPaused(paused = !link.second))
+                    }
+                }
+            }
         }
     }
+}
+
+/** An inline text button on a status line ('Clear', 'Pause', 'Resume'): 48dp tall touch target. */
+@Composable
+private fun StatusLink(label: String, clickLabel: String, onClick: () -> Unit) {
+    Text(
+        label,
+        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.clip(PillShape).clickable(role = Role.Button, onClickLabel = clickLabel, onClick = onClick)
+            .heightIn(min = 48.dp).padding(horizontal = 8.dp).wrapContentHeight(),
+    )
 }
 
 /** H71: '3 examples · Clear' while the Try 3 examples saves are there (they also go at the 5th real save). */
@@ -243,13 +272,7 @@ private fun ExamplesLine(count: Int, onAction: (HomeAction) -> Unit) {
             style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(" · ", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(
-            "Clear",
-            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.clip(PillShape).clickable(role = Role.Button, onClickLabel = "Clear the examples") {
-                onAction(HomeAction.OnClearExamples)
-            }.heightIn(min = 48.dp).padding(horizontal = 8.dp).wrapContentHeight(),
-        )
+        StatusLink("Clear", "Clear the examples") { onAction(HomeAction.OnClearExamples) }
     }
 }
 
@@ -348,7 +371,7 @@ private fun Shelves(shelves: List<Shelf>, all: Int, onAction: (HomeAction) -> Un
 }
 
 @Composable
-private fun EarlyShelves() {
+private fun EarlyShelves(near: NearShelf?) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SectionLabel("Shelves")
         HintCard(Modifier.fillMaxWidth()) {
@@ -357,7 +380,8 @@ private fun EarlyShelves() {
                 Column {
                     Text("Shelves build themselves", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
                     Text(
-                        "When 3 saves share a kind, like Movies or Shoes, a shelf appears here.",
+                        "When 3 saves share a kind, like Movies or Shoes, a shelf appears here." +
+                            near?.let { " ${it.title}: ${it.saves} of 3." }.orEmpty(),
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
