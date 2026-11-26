@@ -35,7 +35,7 @@ internal object ObStyle {
     val button: TextStyle
         @Composable @ReadOnlyComposable get() = MaterialTheme.typography.labelLarge.copy(fontSize = 17.sp, lineHeight = 22.sp)
 
-    /** B1 chip label, one line. */
+    /** B1 chip label (wraps to 2 lines on narrow phones). */
     val chip: TextStyle
         @Composable @ReadOnlyComposable get() = MaterialTheme.typography.labelLarge.copy(fontSize = 16.sp)
 }

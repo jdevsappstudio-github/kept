@@ -57,6 +57,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.jdevsappstudio.kept.core.designsystem.ButtonShape
@@ -173,7 +174,8 @@ private fun TypeTile(type: SaveType, checked: Boolean, modifier: Modifier, onTog
             )
         }
         Text(
-            type.label, style = ObStyle.chip, color = scheme.onSurface, maxLines = 1, softWrap = false,
+            // Narrow phones: wrap to a second line rather than clip; ellipsis only past that.
+            type.label, style = ObStyle.chip, color = scheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f).padding(start = 10.dp),
         )
     }
