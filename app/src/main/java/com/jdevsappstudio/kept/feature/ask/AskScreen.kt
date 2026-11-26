@@ -55,10 +55,13 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,10 +75,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.jdevsappstudio.kept.core.designsystem.ExampleBadge
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.flow.first
 import com.jdevsappstudio.kept.core.designsystem.ButtonShape
 import com.jdevsappstudio.kept.core.designsystem.CardShape
+import com.jdevsappstudio.kept.core.designsystem.ExampleBadge
 import com.jdevsappstudio.kept.core.designsystem.Kept
 import com.jdevsappstudio.kept.core.designsystem.KeptIconButton
 import com.jdevsappstudio.kept.core.designsystem.KeptMark
@@ -89,8 +96,8 @@ import com.jdevsappstudio.kept.core.model.AskRef
 import com.jdevsappstudio.kept.core.model.AskTurn
 import com.jdevsappstudio.kept.core.model.AskTurnStatus
 import com.jdevsappstudio.kept.core.model.SaveType
-import com.jdevsappstudio.kept.core.presentation.openEmail
 import com.jdevsappstudio.kept.core.presentation.ObserveAsEvents
+import com.jdevsappstudio.kept.core.presentation.openEmail
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -230,6 +237,26 @@ private fun Chat(state: AskState, onAction: (AskAction) -> Unit) {
         if (key == seen || state.turns.isEmpty()) return@LaunchedEffect
         if (seen.isEmpty()) list.scrollToItem(state.turns.lastIndex) else list.animateScrollToItem(state.turns.lastIndex)
         seen = key
+    }
+    // Leaving for detail / k-sent hides the bottom bar mid-transition, so the list grows and scrolls back by up to the bar's
+    // height; that shifted position was what came back. So the place is recorded only while Ask is on top, and put back on
+    // resume if it moved while away (unless a new turn arrived meanwhile: then the effect above brings it up instead).
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var placeIndex by rememberSaveable { mutableIntStateOf(-1) }
+    var placeOffset by rememberSaveable { mutableIntStateOf(0) }
+    var placeKey by rememberSaveable { mutableStateOf("") }
+    val currentKey by rememberUpdatedState(key)
+    LaunchedEffect(list, lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            snapshotFlow { list.layoutInfo.viewportSize.height }.first { it > 0 } // coming back resumes before the first layout
+            val moved = list.firstVisibleItemIndex != placeIndex || list.firstVisibleItemScrollOffset != placeOffset
+            if (placeIndex >= 0 && moved && placeKey == currentKey) list.scrollToItem(placeIndex, placeOffset)
+            snapshotFlow { Triple(list.firstVisibleItemIndex, list.firstVisibleItemScrollOffset, seen) }.collect { (i, o, k) ->
+                placeIndex = i
+                placeOffset = o
+                placeKey = k
+            }
+        }
     }
     LazyColumn(
         state = list,
