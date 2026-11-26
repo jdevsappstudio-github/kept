@@ -6,6 +6,8 @@ import com.jdevsappstudio.kept.data.ai.FirebaseCardReader
 import com.jdevsappstudio.kept.data.ai.ReadModelConfig
 import com.jdevsappstudio.kept.data.ai.RemoteReadModelConfig
 import com.jdevsappstudio.kept.data.db.KeptDatabase
+import com.jdevsappstudio.kept.data.examples.ExampleSaves
+import com.jdevsappstudio.kept.data.examples.RoomExampleSaves
 import com.jdevsappstudio.kept.data.files.ImageLoader
 import com.jdevsappstudio.kept.data.files.SaveFiles
 import com.jdevsappstudio.kept.data.queue.NetworkStatus
@@ -25,6 +27,7 @@ import com.jdevsappstudio.kept.data.queue.WorkBackgroundReads
 import org.koin.androidx.workmanager.dsl.worker
 import com.jdevsappstudio.kept.feature.home.HomeViewModel
 import com.jdevsappstudio.kept.feature.home.QueueView
+import com.jdevsappstudio.kept.feature.needlook.NeedLookViewModel
 import com.jdevsappstudio.kept.core.presentation.Snackbars
 import com.jdevsappstudio.kept.feature.library.detail.SaveDetailViewModel
 import com.jdevsappstudio.kept.feature.library.edit.EditSaveViewModel
@@ -39,6 +42,12 @@ import kotlinx.coroutines.SupervisorJob
 import org.koin.android.ext.koin.androidContext
 import java.io.File
 import org.koin.core.module.dsl.viewModel
+import com.jdevsappstudio.kept.data.ai.DeviceModelDownloads
+import com.jdevsappstudio.kept.feature.home.homeReady
+import com.jdevsappstudio.kept.feature.onboarding.ModelViewModel
+import com.jdevsappstudio.kept.feature.onboarding.OnboardingGate
+import com.jdevsappstudio.kept.feature.onboarding.OnboardingViewModel
+import kotlinx.coroutines.flow.first
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import com.jdevsappstudio.kept.data.library.LibraryLocalDataSource
@@ -57,13 +66,15 @@ import com.jdevsappstudio.kept.data.capture.ImageCopier
 import com.jdevsappstudio.kept.data.capture.Keeper
 import com.jdevsappstudio.kept.data.capture.SaveFilesCopier
 import com.jdevsappstudio.kept.feature.add.AddViewModel
+import com.jdevsappstudio.kept.feature.add.HowToViewModel
+import com.jdevsappstudio.kept.feature.add.ReadingViewModel
 import com.jdevsappstudio.kept.feature.add.PickedImports
-import com.jdevsappstudio.kept.data.ads.InstantRewardedAds
 import com.jdevsappstudio.kept.data.ads.NoRewardedAds
 import com.jdevsappstudio.kept.data.ads.RewardedAds
 import com.jdevsappstudio.kept.data.config.FirebaseRemoteValues
 import com.jdevsappstudio.kept.data.config.RemoteValues
 import com.jdevsappstudio.kept.data.quota.CloudQuota
+import com.jdevsappstudio.kept.data.quota.CloudMeter
 import com.jdevsappstudio.kept.data.quota.DataStoreQuotaStore
 import com.jdevsappstudio.kept.data.quota.QuotaLimitsSource
 import com.jdevsappstudio.kept.data.quota.QuotaStore
@@ -85,6 +96,10 @@ import com.jdevsappstudio.kept.data.sent.RoomSentLogDataSource
 import com.jdevsappstudio.kept.data.sent.SentLogLocalDataSource
 import com.jdevsappstudio.kept.feature.ask.AskViewModel
 import com.jdevsappstudio.kept.feature.sent.SentViewModel
+import com.jdevsappstudio.kept.data.wipe.AndroidContentWiper
+import com.jdevsappstudio.kept.data.wipe.ContentWiper
+import com.jdevsappstudio.kept.feature.settings.PrivacyViewModel
+import com.jdevsappstudio.kept.feature.settings.SettingsViewModel
 
 val IMAGE_DISPATCHER = named("image")
 val APP_SCOPE = named("appScope")
@@ -99,7 +114,7 @@ val appModule = module {
     single<QuotaLimitsSource> { RemoteQuotaLimits(get()) }
     single { CloudQuota(get(), get(), SystemQuotaDay()) }
     // AdMob comes later; debug builds pay out at once so the bonus path can be checked on the phone.
-    single<RewardedAds> { if (BuildConfig.DEBUG) InstantRewardedAds() else NoRewardedAds() }
+    single<RewardedAds> { NoRewardedAds() } // H66: no ad in the MVP; InstantRewardedAds checks the ad path by hand
     single<CardReader> { FirebaseCardReader(firebaseConfigured = BuildConfig.HAS_FIREBASE, config = get()) }
     single { KeptDatabase.build(androidContext()) }
     single { get<KeptDatabase>().saveDao() }
@@ -109,13 +124,14 @@ val appModule = module {
     single<CollectionsLocalDataSource> { RoomCollectionsDataSource(get(), get<KeptDatabase>().collectionDao()) }
     single<SearchLocalDataSource> { RoomSearchDataSource(get<KeptDatabase>().searchDao()) }
     single { SaveFiles(androidContext(), get(IMAGE_DISPATCHER)) }
+    single<ExampleSaves> { RoomExampleSaves(androidContext(), get(), get(), get(IMAGE_DISPATCHER)) }
     single<SettingsStore> { DataStoreSettingsStore(androidContext()) }
     single { NetworkStatus(androidContext()) }
     single { ReadRouting(get(), get(), get()) }
     single<ImageCopier> { SaveFilesCopier(get()) }
     single { Keeper(get(), get()) }
     single<ClipboardLinks> { AndroidClipboard(androidContext()) }
-    viewModel { ShareViewModel(get(), get(), get()) }
+    viewModel { ShareViewModel(get(), get(), get(), get()) }
     // App-scoped work (read queue). SupervisorJob: one failure never cancels the rest; the handler logs instead of crashing.
     single(APP_SCOPE) {
         CoroutineScope(SupervisorJob() + Dispatchers.Default + CoroutineExceptionHandler { _, e -> Log.e("Kept", "app scope", e) })
@@ -129,8 +145,40 @@ val appModule = module {
     viewModel { AddViewModel(get(), get(), get(), get()) }
     viewModel {
         val queue = get<ReadQueue>()
-        HomeViewModel(combine(get<SaveLocalDataSource>().observeCounts(), queue.route, queue.pause, ::QueueView), get(), get(), get(), get())
+        val settings = get<SettingsStore>()
+        HomeViewModel(
+            combine(get<SaveLocalDataSource>().observeCounts(), queue.route, queue.pause, ::QueueView), settings, get(), get(), get(),
+            preferredTypes = settings.preferredTypes,
+            ready = homeReady(settings, get<CardReader>()::deviceModelState, get()),
+            reads = get<CloudQuota>().observe(CloudMeter.READS),
+            examples = get(),
+        )
     }
+    // Onboarding (H70).
+    single { DeviceModelDownloads(get(), get(APP_SCOPE)) }
+    single {
+        val saves = get<SaveLocalDataSource>()
+        OnboardingGate(get()) { saves.observeCounts().first().let { it.pending + it.needsLook + it.read } > 0 }
+    }
+    viewModel {
+        OnboardingViewModel(get(), get(), get(), get(), get<CardReader>()::deviceModelState, get<ReadQueue>().pause)
+    }
+    viewModel { ModelViewModel(get(), get<CardReader>()::deviceModelState) }
+    viewModel {
+        val queue = get<ReadQueue>()
+        ReadingViewModel(
+            get(), get(), combine(get<SaveLocalDataSource>().observeCounts(), queue.route, queue.pause, ::QueueView),
+            get(), get<PickedImports>().progress, get(),
+        )
+    }
+    viewModel {
+        val queue = get<ReadQueue>()
+        NeedLookViewModel(
+            get(), combine(get<SaveLocalDataSource>().observeCounts(), queue.route, queue.pause, ::QueueView), get(), get(),
+            reads = get<CloudQuota>().observe(CloudMeter.READS),
+        )
+    }
+    viewModel { HowToViewModel() }
     viewModel { SaveListViewModel(get(), get(), get(), get()) }
     viewModel { SearchViewModel(get(), get<SaveLocalDataSource>().observeCounts(), get(), get(), get(), get(), get()) }
     viewModel { ShelfViewModel(get(), get(), get()) }
@@ -139,7 +187,7 @@ val appModule = module {
     viewModel { EditSaveViewModel(get(), get(), get(), get()) }
     viewModel { CollectionViewModel(get(), get(), get(), get(), get()) }
     viewModel { CollectionNameViewModel(get(), get()) }
-    viewModel { CloudOutViewModel(get(), get(), get()) }
+    viewModel { CloudOutViewModel(get(), get(), get(), adsOn = get<RewardedAds>().available) }
     // Ask (H58) + the sent log behind every Cloud chip (k-sent).
     single<SentLogLocalDataSource> { RoomSentLogDataSource(get<KeptDatabase>().sentDao()) }
     single<AskLocalDataSource> { RoomAskDataSource(get<KeptDatabase>().askDao()) }
@@ -150,6 +198,16 @@ val appModule = module {
     }
     viewModel { AskViewModel(get(), get(), get(), get(), get(), get<NetworkStatus>().online, BuildConfig.VERSION_NAME) }
     viewModel { SentViewModel(get(), get()) }
+    // Settings (H68, H69).
+    single<ContentWiper> { AndroidContentWiper(androidContext(), get(), get(), get(), Dispatchers.IO) }
+    viewModel { SettingsViewModel(get(), get<CardReader>()::deviceModelState) }
+    viewModel {
+        val quota = get<CloudQuota>()
+        PrivacyViewModel(
+            get(), get(), get(), get(), get(), get<SaveLocalDataSource>().observeCounts(), get<CardReader>()::deviceModelState,
+            reads = quota.observe(CloudMeter.READS), answers = quota.observe(CloudMeter.ANSWERS),
+        )
+    }
     // Fill in with cloud (H59): URL context on a caption-only link, 1 answer.
     single<PageFiller> { FirebasePageFiller(BuildConfig.HAS_FIREBASE, RemoteReadModelConfig.forFill(get())) }
     single<FillRepository> {

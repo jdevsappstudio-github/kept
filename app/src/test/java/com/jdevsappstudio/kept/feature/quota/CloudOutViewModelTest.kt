@@ -18,6 +18,7 @@ import com.jdevsappstudio.kept.feature.library.next
 import com.jdevsappstudio.kept.feature.library.resId
 import com.jdevsappstudio.kept.feature.library.testSnackbars
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -27,10 +28,11 @@ class CloudOutViewModelTest {
     private val quota = testQuota()
     private val snackbars = testSnackbars()
 
-    private fun TestScope.vm(meter: CloudMeter? = null) = CloudOutViewModel(
+    private fun TestScope.vm(meter: CloudMeter? = null, adsOn: Boolean = true) = CloudOutViewModel(
         SavedStateHandle(meter?.let { mapOf(CloudOutViewModel.ARG_METER to it.name) } ?: emptyMap()),
         quota,
         snackbars,
+        adsOn,
     ).also { keepActive(it.state) }
 
     @Test
@@ -89,6 +91,24 @@ class CloudOutViewModelTest {
     }
 
     @Test
+    fun `after no ad the button waits a minute, taps ignored meanwhile`() = runTest {
+        val vm = vm()
+        vm.events.test {
+            vm.onAction(CloudOutAction.OnWatchAd)
+            awaitItem()
+            vm.onAction(CloudOutAction.OnAdResult(AdOutcome.NO_AD))
+            assertThat(vm.state.value.noAdWait).isTrue()
+            assertThat(vm.state.value.canWatchAd).isFalse()
+            vm.onAction(CloudOutAction.OnWatchAd)
+            expectNoEvents()
+            advanceTimeBy(CloudOutViewModel.NO_AD_WAIT_MS + 1)
+            assertThat(vm.state.value.canWatchAd).isTrue()
+            vm.onAction(CloudOutAction.OnWatchAd)
+            assertThat(awaitItem()).isEqualTo(CloudOutEvent.ShowAd)
+        }
+    }
+
+    @Test
     fun `closed early stays on the sheet and adds nothing`() = runTest {
         val vm = vm()
         vm.events.test {
@@ -99,6 +119,17 @@ class CloudOutViewModelTest {
         }
         assertThat(quota.now(CloudMeter.ANSWERS).bonus).isEqualTo(0)
         assertThat(vm.state.value.showingAd).isFalse()
+    }
+
+    @Test
+    fun `no ad provider (MVP, H66) offers no ad and ignores Watch`() = runTest {
+        val vm = vm(adsOn = false)
+        assertThat(vm.state.value.adOffered).isFalse()
+        assertThat(vm.state.value.canWatchAd).isFalse()
+        vm.events.test {
+            vm.onAction(CloudOutAction.OnWatchAd)
+            expectNoEvents()
+        }
     }
 
     @Test

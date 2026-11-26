@@ -16,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         AskTurnEntity::class, AskRefEntity::class, SentEntity::class,
     ],
     views = [ShelfSaveView::class],
-    version = 5,
+    version = 6,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2, spec = KeptDatabase.V1ToV2::class),
@@ -24,6 +24,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         AutoMigration(from = 3, to = 4),
         // v5 (H59): saves.filledAt for Fill in with cloud.
         AutoMigration(from = 4, to = 5),
+        // v6 (H71): saves.example for Try 3 examples.
+        AutoMigration(from = 5, to = 6),
     ],
 )
 abstract class KeptDatabase : RoomDatabase() {

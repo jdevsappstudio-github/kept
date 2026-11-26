@@ -13,8 +13,12 @@ import com.jdevsappstudio.kept.data.queue.ReadQueue
 import com.jdevsappstudio.kept.di.APP_SCOPE
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
+import com.jdevsappstudio.kept.data.ai.DeviceModelDownloads
 import org.koin.core.context.startKoin
 import com.jdevsappstudio.kept.data.library.LibraryLocalDataSource
+import com.jdevsappstudio.kept.data.queue.ReadNotifications
+import com.jdevsappstudio.kept.data.settings.SettingsStore
 
 class KeptApplication : Application(), Configuration.Provider {
     // WorkManager starts lazily on first use (the manifest removes its startup initializer) with Koin's factory.
@@ -37,8 +41,18 @@ class KeptApplication : Application(), Configuration.Provider {
         koin.get<CoroutineScope>(APP_SCOPE).launch {
             if (BuildConfig.HAS_FIREBASE) AppCheckSetup.install()
             koin.get<ReadQueue>().start()
+            // H70: a phone whose AI wasn't fetched yet (onboarding left early, a failed try) asks again, after onboarding only.
+            if (koin.get<SettingsStore>().onboardingDone.first()) koin.get<DeviceModelDownloads>().startIfNeeded()
             // Deletes whose Undo window has long passed (snackbar can't outlive the process).
             koin.get<LibraryLocalDataSource>().purgeStale()
+        }
+        // Reading updates (H68): the notice follows the switch; turning it off clears one that is showing.
+        koin.get<CoroutineScope>(APP_SCOPE).launch {
+            val notices = koin.get<ReadNotifications>()
+            koin.get<SettingsStore>().readingUpdates.collect { on ->
+                notices.readingUpdates = on
+                if (!on) notices.cancel()
+            }
         }
     }
 }

@@ -17,6 +17,17 @@ abstract class CollectionDao {
     @Query("SELECT $COLUMNS FROM collections c ORDER BY c.createdAt DESC, c.id DESC")
     abstract fun observeAll(): Flow<List<CollectionRow>>
 
+    /** Tile pictures: per collection, the 3 newest saves that have a picture. */
+    @Query(
+        "SELECT CAST(cs.collectionId AS TEXT) AS grp, COALESCE(s.thumbPath, s.imagePath) AS path " +
+            "FROM collection_saves cs JOIN saves s ON s.id = cs.saveId " +
+            "WHERE s.id IN (SELECT cs2.saveId FROM collection_saves cs2 JOIN saves s2 ON s2.id = cs2.saveId " +
+            "  WHERE cs2.collectionId = cs.collectionId AND s2.deletedAt IS NULL " +
+            "  AND COALESCE(s2.thumbPath, s2.imagePath) IS NOT NULL ORDER BY s2.createdAt DESC LIMIT 3) " +
+            "ORDER BY s.createdAt DESC",
+    )
+    abstract fun observePreviews(): Flow<List<PreviewRow>>
+
     @Query("SELECT $COLUMNS FROM collections c WHERE c.id = :id")
     abstract fun observe(id: Long): Flow<CollectionRow?>
 

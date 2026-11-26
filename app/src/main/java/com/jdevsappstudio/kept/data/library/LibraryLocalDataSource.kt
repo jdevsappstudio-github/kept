@@ -19,6 +19,10 @@ import kotlinx.coroutines.flow.Flow
 interface LibraryLocalDataSource {
     fun pagedSaves(filter: SaveFilter): Flow<PagingData<Save>>
     fun observeNewest(): Flow<Save?>
+    /** k-reading (H63): saves kept since [since], newest first, read or not (at most [limit]). */
+    fun observeSince(since: Long, limit: Int = 300): Flow<List<Save>>
+    /** k-failed: saves not read yet (waiting, reading, Needs a look), newest first (at most [limit]). */
+    fun observeUnread(limit: Int = 300): Flow<List<Save>>
     fun observeSave(id: Long): Flow<Save?>
     fun observeItems(saveId: Long): Flow<List<SaveItem>>
 
@@ -30,6 +34,8 @@ interface LibraryLocalDataSource {
 
     /** Every shelf in display order, hidden ones included (k-shelves); home takes [ShelfOrder.onHome]. */
     fun observeShelves(): Flow<List<Shelf>>
+    /** Saves kept since [since] (home subtitle 'N new this week'). */
+    fun observeCountSince(since: Long): Flow<Int>
     fun observeShelfEntries(shelf: String, tag: String? = null): Flow<List<ShelfEntry>>
 
     // Edit sheet (k-organize)

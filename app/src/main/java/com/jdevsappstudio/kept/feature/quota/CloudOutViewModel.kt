@@ -9,7 +9,9 @@ import com.jdevsappstudio.kept.core.presentation.UiText
 import com.jdevsappstudio.kept.data.ads.AdOutcome
 import com.jdevsappstudio.kept.data.quota.CloudMeter
 import com.jdevsappstudio.kept.data.quota.CloudQuota
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -31,7 +33,13 @@ data class CloudOutState(
     val perAd: Int = 0,
     /** An ad is on screen or loading: the button is disabled so a double tap can't start two. */
     val showingAd: Boolean = false,
-)
+    /** 'No ad right now': the button stays greyed for [CloudOutViewModel.NO_AD_WAIT_MS] (k-ad-rewarded). */
+    val noAdWait: Boolean = false,
+    /** False in the MVP (H66): no ad button, 'Wait till midnight' is the only way. */
+    val adOffered: Boolean = false,
+) {
+    val canWatchAd: Boolean get() = adOffered && !loading && !showingAd && !noAdWait
+}
 
 sealed interface CloudOutAction {
     data object OnWatchAd : CloudOutAction
@@ -53,15 +61,20 @@ class CloudOutViewModel(
     savedStateHandle: SavedStateHandle,
     private val quota: CloudQuota,
     private val snackbars: Snackbars,
+    private val adsOn: Boolean,
 ) : ViewModel() {
 
     private val meter: CloudMeter =
         savedStateHandle.get<String>(ARG_METER)?.let { n -> CloudMeter.entries.firstOrNull { it.name == n } } ?: CloudMeter.ANSWERS
     private val showingAd = MutableStateFlow(false)
+    private val noAdWait = MutableStateFlow(false)
+    private var noAdJob: Job? = null
 
-    val state: StateFlow<CloudOutState> = combine(quota.observe(meter), showingAd) { m, ad ->
-        CloudOutState(meter = meter, loading = false, left = m.left, total = m.total, perAd = m.perAd, showingAd = ad)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CloudOutState(meter = meter))
+    val state: StateFlow<CloudOutState> = combine(quota.observe(meter), showingAd, noAdWait) { m, ad, wait ->
+        CloudOutState(
+            meter = meter, loading = false, left = m.left, total = m.total, perAd = m.perAd, showingAd = ad, noAdWait = wait, adOffered = adsOn,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CloudOutState(meter = meter, adOffered = adsOn))
 
     private val _events = Channel<CloudOutEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
@@ -69,7 +82,7 @@ class CloudOutViewModel(
     fun onAction(action: CloudOutAction) {
         when (action) {
             CloudOutAction.OnWatchAd -> {
-                if (showingAd.value) return
+                if (!adsOn || showingAd.value || noAdWait.value) return
                 showingAd.value = true
                 _events.trySend(CloudOutEvent.ShowAd)
             }
@@ -81,7 +94,10 @@ class CloudOutViewModel(
                         _events.send(CloudOutEvent.Granted(added))
                     }
                     AdOutcome.CLOSED_EARLY -> Unit // back on the sheet, nothing added
-                    AdOutcome.NO_AD -> snackbars.show(UiText.Res(R.string.quota_no_ad))
+                    AdOutcome.NO_AD -> {
+                        snackbars.show(UiText.Res(R.string.quota_no_ad))
+                        startNoAdWait()
+                    }
                 }
                 showingAd.value = false
             }
@@ -89,9 +105,19 @@ class CloudOutViewModel(
         }
     }
 
+    private fun startNoAdWait() {
+        noAdJob?.cancel()
+        noAdWait.value = true
+        noAdJob = viewModelScope.launch {
+            delay(NO_AD_WAIT_MS)
+            noAdWait.value = false
+        }
+    }
+
     private fun addedText() = if (meter == CloudMeter.ANSWERS) R.plurals.quota_answers_added else R.plurals.quota_reads_added
 
     companion object {
         const val ARG_METER = "meter"
+        const val NO_AD_WAIT_MS = 60_000L
     }
 }

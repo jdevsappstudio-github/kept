@@ -1,6 +1,8 @@
 package com.jdevsappstudio.kept.data.ai
 
 import android.graphics.Bitmap
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 /** Which side reads. Picked per call (BUILD-SPEC §3) so the routing chip is always truthful. */
 enum class ReadEngine { DEVICE, CLOUD }
@@ -83,8 +85,19 @@ sealed interface ReadResult {
     data class Failure(val reason: ReadFailure, val detail: String?) : ReadResult
 }
 
+/** One step of the on-device model download, mapped from the SDK's DownloadStatus. */
+sealed interface ModelDownloadStep {
+    data class Started(val bytes: Long) : ModelDownloadStep
+    data class Progress(val bytesDone: Long) : ModelDownloadStep
+    data object Done : ModelDownloadStep
+    data class Failed(val detail: String?) : ModelDownloadStep
+}
+
 interface CardReader {
     suspend fun deviceModelState(): DeviceModelState
+
+    /** Asks Android for the on-device model (the SDK never downloads by itself). Empty where there is none to get. */
+    fun downloadDeviceModel(): Flow<ModelDownloadStep> = emptyFlow()
 
     /**
      * [image] already scaled to ≤ 1024 px. [text] is shared text / URL / caption, if any.

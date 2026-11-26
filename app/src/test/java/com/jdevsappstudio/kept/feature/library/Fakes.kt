@@ -91,6 +91,12 @@ class FakeLibrary : LibraryLocalDataSource {
     }
 
     override fun observeNewest(): Flow<Save?> = saves.map { m -> m.values.maxByOrNull { it.createdAt } }
+    override fun observeSince(since: Long, limit: Int): Flow<List<Save>> = saves.map { m ->
+        m.values.filter { it.createdAt >= since }.sortedWith(compareByDescending<Save> { it.createdAt }.thenByDescending { it.id }).take(limit)
+    }
+    override fun observeUnread(limit: Int): Flow<List<Save>> = saves.map { m ->
+        m.values.filter { it.status != SaveStatus.READ }.sortedWith(compareByDescending<Save> { it.createdAt }.thenByDescending { it.id }).take(limit)
+    }
     override fun observeSave(id: Long): Flow<Save?> = saves.map { it[id] }
     override fun observeItems(saveId: Long): Flow<List<SaveItem>> = items.map { it[saveId].orEmpty() }
     override fun observeTypeChips(preferred: List<SaveType>): Flow<List<TypeChip>> = chips
@@ -101,6 +107,8 @@ class FakeLibrary : LibraryLocalDataSource {
     }
     override fun observeAllTags(): Flow<List<String>> = allTags
     override fun observeShelves(): Flow<List<Shelf>> = shelves
+    val newThisWeek = MutableStateFlow(0)
+    override fun observeCountSince(since: Long): Flow<Int> = newThisWeek
     override fun observeShelfEntries(shelf: String, tag: String?): Flow<List<ShelfEntry>> = entries.map { it[tag].orEmpty() }
 
     override suspend fun edit(id: Long, title: String, type: SaveType, tags: List<String>) {
@@ -226,6 +234,24 @@ class FakeSettings : SettingsStore {
     override suspend fun addRecentSearch(text: String) { recentSearches.value = SettingsStore.pushRecent(recentSearches.value, text) }
     override val dismissedSuggestions = MutableStateFlow<Set<String>>(emptySet())
     override suspend fun dismissSuggestion(tag: String) { dismissedSuggestions.value += tag }
+    override val themeMode = MutableStateFlow(com.jdevsappstudio.kept.core.model.ThemeMode.SYSTEM)
+    override suspend fun setThemeMode(mode: com.jdevsappstudio.kept.core.model.ThemeMode) { themeMode.value = mode }
+    override val readingUpdates = MutableStateFlow(true)
+    override suspend fun setReadingUpdates(on: Boolean) { readingUpdates.value = on }
+    override suspend fun clearContent() {
+        recentSearches.value = emptyList()
+        dismissedSuggestions.value = emptySet()
+    }
+    override val onboardingDone = MutableStateFlow(false)
+    var onboardingWritten = false
+    override suspend fun setOnboardingDone(done: Boolean) { onboardingDone.value = done; onboardingWritten = true }
+    override suspend fun onboardingFlagWritten() = onboardingWritten
+    override val preferredTypes = MutableStateFlow<List<com.jdevsappstudio.kept.core.model.SaveType>>(emptyList())
+    override suspend fun setPreferredTypes(types: List<com.jdevsappstudio.kept.core.model.SaveType>) { preferredTypes.value = types }
+    override val shareApps = MutableStateFlow<List<com.jdevsappstudio.kept.core.model.ShareApp>>(emptyList())
+    override suspend fun setShareApps(apps: List<com.jdevsappstudio.kept.core.model.ShareApp>) { shareApps.value = apps }
+    override val firstSaveSeen = MutableStateFlow(false)
+    override suspend fun markFirstSaveSeen() { firstSaveSeen.value = true }
 }
 
 /** Snackbars whose Undo runs at once. */

@@ -6,6 +6,14 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- k-howto 'Open Instagram' (H63): see whether each how-to app is installed, else open its Play page. -->
+    <queries>
+        <package android:name="com.instagram.android" />
+        <package android:name="com.google.android.youtube" />
+        <package android:name="com.whatsapp" />
+        <package android:name="com.android.chrome" />
+    </queries>
+
     <application
         android:name=".KeptApplication"
         android:allowBackup="false"

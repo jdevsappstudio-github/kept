@@ -11,6 +11,7 @@ import com.jdevsappstudio.kept.data.db.CollectionRow
 import com.jdevsappstudio.kept.data.db.CollectionSaveEntity
 import com.jdevsappstudio.kept.data.db.KeptDatabase
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
@@ -52,7 +53,10 @@ class RoomCollectionsDataSource(
 ) : CollectionsLocalDataSource {
 
     override fun observeCollections(): Flow<List<SaveCollection>> =
-        dao.observeAll().map { rows -> rows.map { it.toModel() } }.distinctUntilChanged()
+        combine(dao.observeAll(), dao.observePreviews()) { rows, pics ->
+            val previews = pics.groupBy({ it.grp }, { it.path })
+            rows.map { it.toModel().copy(previews = previews[it.id.toString()].orEmpty()) }
+        }.distinctUntilChanged()
 
     override fun observeCollection(id: Long): Flow<SaveCollection?> =
         dao.observe(id).map { it?.toModel() }.distinctUntilChanged()

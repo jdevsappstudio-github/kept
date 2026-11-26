@@ -8,6 +8,8 @@ import com.jdevsappstudio.kept.data.capture.Keeper
 import com.jdevsappstudio.kept.data.capture.TextKept
 import com.jdevsappstudio.kept.data.queue.ReadRoute
 import com.jdevsappstudio.kept.data.queue.ReadRouting
+import com.jdevsappstudio.kept.data.quota.CloudMeter
+import com.jdevsappstudio.kept.data.quota.CloudQuota
 import com.jdevsappstudio.kept.data.settings.SettingsStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
@@ -34,6 +36,8 @@ data class ShareState(
     /** Couldn't be opened (the other app revoked or gave a broken stream). */
     val unreadable: Int = 0,
     val route: ReadRoute? = null,
+    /** Cloud route but today's cloud reads are used up: the save waits for midnight (H46). */
+    val readsOut: Boolean = false,
     val noteReason: NoteReason? = null,
     /** Save to open from "Open it" / "Add a title". */
     val saveId: Long? = null,
@@ -59,6 +63,7 @@ class ShareViewModel(
     private val keeper: Keeper,
     private val routing: ReadRouting,
     private val settings: SettingsStore,
+    private val quota: CloudQuota,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ShareState())
@@ -73,7 +78,7 @@ class ShareViewModel(
         if (started) return
         started = true
         viewModelScope.launch {
-            val route = async { routing.current() }
+            val route = async { routing.current().let { it to (it == ReadRoute.CLOUD && quota.left(CloudMeter.READS) <= 0) } }
             try {
                 if (payload.images.isEmpty()) keepText(payload) else keepImages(payload)
             } catch (e: CancellationException) {
@@ -81,7 +86,8 @@ class ShareViewModel(
             } catch (e: Exception) {
                 _state.update { it.copy(phase = SharePhase.FAILED) }
             }
-            _state.update { it.copy(route = route.await()) }
+            val (r, out) = route.await()
+            _state.update { it.copy(route = r, readsOut = out) }
             if (_state.value.phase == SharePhase.KEPT && settings.claimNotificationAsk()) _events.send(ShareEvent.AskNotifications)
         }
     }

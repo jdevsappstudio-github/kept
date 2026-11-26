@@ -18,6 +18,7 @@
     <string name="share_failed_body">The other app didn\'t hand it over. Try sharing it again.</string>
     <string name="share_route_device">Reading on this phone. You can keep scrolling.</string>
     <string name="share_route_cloud">Reading with Gemini in the cloud. You can keep scrolling.</string>
+    <string name="share_route_reads_out">Kept. Today\'s cloud reads are used up, so it\'s read after midnight.</string>
     <string name="share_route_offline">Kept. Read when you\'re back online.</string>
     <string name="share_route_consent">Saved on this phone. Open Kept to choose how it\'s read.</string>
     <string name="share_already_body">Nothing was added twice.</string>
@@ -53,11 +54,13 @@
     <string name="notif_read_body">Tap to see them in Kept.</string>
     <!-- Library snackbars (H51 1b) -->
     <string name="snack_undo">Undo</string>
+    <string name="snack_edit">Edit</string>
     <plurals name="snack_deleted">
         <item quantity="one">Deleted</item>
         <item quantity="other">Deleted %1$d</item>
     </plurals>
     <string name="snack_saved">Saved</string>
+    <string name="snack_examples_cleared">Examples cleared</string>
     <string name="snack_hidden">Hidden from home</string>
     <string name="snack_merged">Merged into %1$s</string>
     <string name="snack_off_shelf">Off the %1$s shelf</string>
@@ -76,6 +79,10 @@
     <string name="snack_already_on_shelf">Already on your %1$s shelf</string>
     <string name="snack_already_here">Already on this save</string>
     <!-- Collections (H55) -->
+    <plurals name="snack_copied_items">
+        <item quantity="one">Copied %d item</item>
+        <item quantity="other">Copied %d items</item>
+    </plurals>
     <plurals name="snack_made_collection">
         <item quantity="one">Made %1$s · %2$d save</item>
         <item quantity="other">Made %1$s · %2$d saves</item>

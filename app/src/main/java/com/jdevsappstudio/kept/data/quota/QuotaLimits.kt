@@ -13,7 +13,8 @@ data class QuotaLimits(
     fun perAd(m: CloudMeter) = if (m == CloudMeter.ANSWERS) answersPerAd else readsPerAd
 
     companion object {
-        const val ANSWERS_PER_DAY = 5
+        /** H66: 20 a day while judging, as there is no ad in the MVP (until 16 Dec); afterwards publish quota_answers_per_day = 5, no release. */
+        const val ANSWERS_PER_DAY = 20
         /** H46: 100 a day while judging (until 16 Dec); afterwards publish quota_reads_per_day = 30 (H32), no release. */
         const val READS_PER_DAY = 100
         const val ANSWERS_PER_AD = 3

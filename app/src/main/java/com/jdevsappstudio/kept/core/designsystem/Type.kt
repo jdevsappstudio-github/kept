@@ -4,6 +4,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.unit.sp
@@ -20,7 +21,12 @@ private fun family(name: String, vararg weights: FontWeight) = FontFamily(
     weights.map { w -> Font(googleFont = GoogleFont(name), fontProvider = provider, weight = w) },
 )
 
-val Newsreader = family("Newsreader", FontWeight.Normal, FontWeight.SemiBold)
+val Newsreader = FontFamily(
+    Font(googleFont = GoogleFont("Newsreader"), fontProvider = provider, weight = FontWeight.Normal),
+    Font(googleFont = GoogleFont("Newsreader"), fontProvider = provider, weight = FontWeight.SemiBold),
+    // Home headline "tagged." is set in italic.
+    Font(googleFont = GoogleFont("Newsreader"), fontProvider = provider, weight = FontWeight.SemiBold, style = FontStyle.Italic),
+)
 val Inter = family("Inter", FontWeight.Normal, FontWeight.Medium, FontWeight.SemiBold)
 
 // Roles from the design doc: Display 32/36, Title 24/30, Saved title 18/23, Body 16/23, Label 15/20, Meta 13/18.

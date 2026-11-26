@@ -25,6 +25,19 @@ abstract class SaveDao {
     @Query("SELECT id FROM saves WHERE url = :url AND imagePath IS NULL LIMIT 1")
     abstract suspend fun findByUrl(url: String): Long?
 
+    // ---- Examples (H71) ----
+
+    /** Live example saves, oldest first (Home's '3 examples · Clear' line). */
+    @Query("SELECT id FROM saves WHERE example = 1 AND deletedAt IS NULL ORDER BY createdAt")
+    abstract fun observeExampleIds(): Flow<List<Long>>
+
+    /** Every example row, soft-deleted ones too: they all go at the 5th real save. */
+    @Query("SELECT id FROM saves WHERE example = 1")
+    abstract suspend fun exampleIds(): List<Long>
+
+    @Query("SELECT COUNT(*) FROM saves WHERE example = 0 AND deletedAt IS NULL")
+    abstract suspend fun realCount(): Int
+
     @Query("SELECT status, COUNT(*) AS n FROM saves WHERE deletedAt IS NULL GROUP BY status")
     abstract fun observeStatusCounts(): Flow<List<StatusCount>>
 

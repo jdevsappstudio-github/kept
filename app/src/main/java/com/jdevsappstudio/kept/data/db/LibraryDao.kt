@@ -35,6 +35,16 @@ abstract class LibraryDao {
     @Query("SELECT * FROM saves WHERE deletedAt IS NULL ORDER BY createdAt DESC LIMIT 1")
     abstract fun observeNewest(): Flow<SaveWithDetails?>
 
+    /** k-reading (H63): this batch = saves kept since the person tapped Pick or Paste, newest first. */
+    @Transaction
+    @Query("SELECT * FROM saves WHERE deletedAt IS NULL AND createdAt >= :since ORDER BY createdAt DESC, id DESC LIMIT :limit")
+    abstract fun observeSince(since: Long, limit: Int): Flow<List<SaveWithDetails>>
+
+    /** Needs a look: every save that isn't read yet (waiting, reading or given up), newest first. */
+    @Transaction
+    @Query("SELECT * FROM saves WHERE deletedAt IS NULL AND status != 'READ' ORDER BY createdAt DESC, id DESC LIMIT :limit")
+    abstract fun observeUnread(limit: Int): Flow<List<SaveWithDetails>>
+
     @Transaction
     @Query("SELECT * FROM saves WHERE id = :id AND deletedAt IS NULL")
     abstract fun observeSave(id: Long): Flow<SaveWithDetails?>
@@ -73,30 +83,44 @@ abstract class LibraryDao {
     @Query(
         "SELECT v.shelf AS kind, COUNT(*) AS saves, " +
             "(SELECT COUNT(DISTINCT i.itemKey) FROM save_items i JOIN shelf_saves v2 ON v2.saveId = i.saveId " +
-            "  WHERE v2.shelf = v.shelf AND i.hidden = 0) AS items, " +
-            "(SELECT COUNT(*) FROM shelf_saves v3 WHERE v3.shelf = v.shelf " +
-            "  AND NOT EXISTS (SELECT 1 FROM save_items i3 WHERE i3.saveId = v3.saveId)) AS bareSaves, " +
+            "  JOIN saves s2 ON s2.id = i.saveId WHERE v2.shelf = v.shelf AND i.hidden = 0 AND s2.type != 'recipe') AS items, " +
+            "(SELECT COUNT(*) FROM shelf_saves v3 JOIN saves s3 ON s3.id = v3.saveId WHERE v3.shelf = v.shelf " +
+            "  AND (s3.type = 'recipe' OR NOT EXISTS (SELECT 1 FROM save_items i3 WHERE i3.saveId = v3.saveId))) AS bareSaves, " +
             "sh.name AS name, COALESCE(sh.hidden, 0) AS hidden, sh.position AS position " +
             "FROM shelf_saves v LEFT JOIN shelves sh ON sh.kind = v.shelf " +
             "GROUP BY v.shelf, sh.name, sh.hidden, sh.position HAVING COUNT(*) >= 3",
     )
     abstract fun observeShelves(): Flow<List<ShelfRow>>
 
+    /** Tile pictures: per shelf, the 3 newest saves that have a picture (thumb first, else the original). */
+    @Query(
+        "SELECT v.shelf AS grp, COALESCE(s.thumbPath, s.imagePath) AS path FROM shelf_saves v JOIN saves s ON s.id = v.saveId " +
+            "WHERE s.id IN (SELECT v2.saveId FROM shelf_saves v2 JOIN saves s2 ON s2.id = v2.saveId WHERE v2.shelf = v.shelf " +
+            "  AND COALESCE(s2.thumbPath, s2.imagePath) IS NOT NULL ORDER BY s2.createdAt DESC LIMIT 3) " +
+            "ORDER BY s.createdAt DESC",
+    )
+    abstract fun observeShelfPreviews(): Flow<List<PreviewRow>>
+
+    /** Home subtitle "12 new this week": saves kept since [since], read or not. */
+    @Query("SELECT COUNT(*) FROM saves WHERE deletedAt IS NULL AND createdAt >= :since")
+    abstract fun observeCountSince(since: Long): Flow<Int>
+
     /**
      * Rows of one shelf, newest first: items merged by key (name + source from the newest save that has it),
-     * then saves with no items at all as their own rows. [tag] narrows to saves with that tag (sub-kind chips).
+     * then saves with no items at all as their own rows. A recipe's items are its ingredients: the recipe is one row. [tag] narrows to saves with that tag (sub-kind chips).
      */
     @Query(
         "SELECT i.itemKey AS itemKey, i.name AS name, COUNT(DISTINCT i.saveId) AS saves, i.saveId AS saveId, " +
-            "s.sourceApp AS sourceApp, MAX(s.createdAt) AS newest " +
+            "s.sourceApp AS sourceApp, s.type AS type, COALESCE(NULLIF(s.link, ''), s.url) AS link, MAX(s.createdAt) AS newest " +
             "FROM save_items i JOIN shelf_saves v ON v.saveId = i.saveId JOIN saves s ON s.id = i.saveId " +
-            "WHERE v.shelf = :shelf AND i.hidden = 0 AND i.itemKey != '' " +
+            "WHERE v.shelf = :shelf AND i.hidden = 0 AND i.itemKey != '' AND s.type != 'recipe' " +
             "AND (:tag IS NULL OR i.saveId IN (SELECT saveId FROM save_tags WHERE tag = :tag)) " +
             "GROUP BY i.itemKey " +
             "UNION ALL " +
-            "SELECT '' AS itemKey, s.title AS name, 1 AS saves, s.id AS saveId, s.sourceApp AS sourceApp, s.createdAt AS newest " +
+            "SELECT '' AS itemKey, s.title AS name, 1 AS saves, s.id AS saveId, s.sourceApp AS sourceApp, s.type AS type, " +
+            "COALESCE(NULLIF(s.link, ''), s.url) AS link, s.createdAt AS newest " +
             "FROM saves s JOIN shelf_saves v ON v.saveId = s.id " +
-            "WHERE v.shelf = :shelf AND NOT EXISTS (SELECT 1 FROM save_items i WHERE i.saveId = s.id) " +
+            "WHERE v.shelf = :shelf AND (s.type = 'recipe' OR NOT EXISTS (SELECT 1 FROM save_items i WHERE i.saveId = s.id)) " +
             "AND (:tag IS NULL OR s.id IN (SELECT saveId FROM save_tags WHERE tag = :tag)) " +
             "ORDER BY newest DESC",
     )
@@ -141,8 +165,8 @@ abstract class LibraryDao {
 
     /** The shelf an item key already sits on, if any (for + Add a movie). Not counting [exceptSave]. */
     @Query(
-        "SELECT v.shelf FROM save_items i JOIN shelf_saves v ON v.saveId = i.saveId " +
-            "WHERE i.itemKey = :key AND i.saveId != :exceptSave AND i.hidden = 0 " +
+        "SELECT v.shelf FROM save_items i JOIN shelf_saves v ON v.saveId = i.saveId JOIN saves s ON s.id = i.saveId " +
+            "WHERE i.itemKey = :key AND i.saveId != :exceptSave AND i.hidden = 0 AND s.type != 'recipe' " +
             "AND (SELECT COUNT(*) FROM shelf_saves v2 WHERE v2.shelf = v.shelf) >= 3 LIMIT 1",
     )
     abstract suspend fun shelfWithItem(key: String, exceptSave: Long): String?
@@ -258,7 +282,13 @@ data class ShelfEntryRow(
     val saves: Int,
     val saveId: Long,
     val sourceApp: String?,
+    /** [com.jdevsappstudio.kept.core.model.SaveType.wire] of the save that holds it. */
+    val type: String,
+    val link: String?,
     val newest: Long,
 )
 
 data class SaveItemRow(val id: Long, val name: String, val hidden: Boolean, val otherSaves: Int)
+
+/** One tile picture: [grp] = shelf kind or collection id. */
+data class PreviewRow(val grp: String, val path: String)

@@ -41,7 +41,7 @@ class RoomAskDataSource(private val dao: AskDao) : AskLocalDataSource {
     override fun observeTurns(): Flow<List<AskTurn>> = combine(dao.observeTurns(), dao.observeRefs()) { turns, refs ->
         val byTurn = refs.groupBy { it.turnId }
         turns.map { t ->
-            t.toAskTurn(byTurn[t.id].orEmpty().map { AskRef(it.saveId, it.title, it.type.toTypeOrNull()) })
+            t.toAskTurn(byTurn[t.id].orEmpty().map { AskRef(it.saveId, it.title, it.type.toTypeOrNull(), it.thumbPath, AskRef.line(it.summary, it.place), it.example) })
         }
     }
 
@@ -89,6 +89,7 @@ class RoomAskDataSource(private val dao: AskDao) : AskLocalDataSource {
     private fun AskTurnEntity.toAskTurn(refs: List<AskRef>) = AskTurn(
         id = id, createdAt = createdAt, question = question, answer = answer, refs = refs,
         status = status, hidden = hidden, sentId = sentId,
+        sourceCount = sourceIds.split(',').count { it.isNotBlank() },
     )
 
     private fun AskSourceRow.toSource() = SourceSave(

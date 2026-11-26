@@ -6,7 +6,8 @@ import com.jdevsappstudio.kept.data.ai.CardDraft
 /** Pure clean-up of a model answer before it is stored (unit-tested; the model can ignore maxItems). */
 internal object CardMapping {
     const val MAX_TAGS = 5
-    const val MAX_ITEMS = 8
+    /** 15 fits a recipe's ingredients (owner 26 Nov); movies and the like rarely pass 8. */
+    const val MAX_ITEMS = 15
 
     fun tags(card: CardDraft): List<String> =
         card.tags.asSequence()

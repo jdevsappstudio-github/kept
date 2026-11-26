@@ -14,6 +14,8 @@ data class AskTurn(
     val hidden: Boolean,
     /** The request behind this turn's Cloud chip (k-sent opens at it). */
     val sentId: Long?,
+    /** How many saves' text went with the question: 'Cloud · sent text of 9 saves'. */
+    val sourceCount: Int = 0,
 )
 
 enum class AskTurnStatus {
@@ -24,7 +26,22 @@ enum class AskTurnStatus {
     FAILED,
 }
 
-data class AskRef(val saveId: Long, val title: String, val type: SaveType?)
+data class AskRef(
+    val saveId: Long,
+    val title: String,
+    val type: SaveType?,
+    val thumbPath: String? = null,
+    /** The row's second line under the answer ('Assagao · banana pancakes'). */
+    val line: String = "",
+    /** H71: a Try 3 examples save (Example badge on the row). */
+    val example: Boolean = false,
+) {
+    companion object {
+        /** First summary line, else the place; blank when neither (the row shows the title alone). */
+        fun line(summary: String, place: String): String =
+            summary.lineSequence().firstOrNull { it.isNotBlank() }?.trim() ?: place.trim()
+    }
+}
 
 /** What kind of cloud request a [SentRequest] was (k-sent rows). */
 enum class SentKind { ASK, FILL_IN, READ }

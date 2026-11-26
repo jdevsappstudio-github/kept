@@ -134,7 +134,7 @@ class AskViewModelTest {
         assertThat(vm.state.value.turns).isEmpty()
         // k-cloud-out's Root after a watched ad:
         quota.grantAd(CloudMeter.ANSWERS)
-        handle[AskViewModel.KEY_ANSWERS_GRANTED] = true
+        vm.onAction(AskAction.OnAnswersGranted)
         assertThat(vm.state.value.turns.single().answer).isEqualTo("Prisoners.")
         assertThat(vm.state.value.input).isEqualTo("")
         assertThat(vm.state.value.answersLeft).isEqualTo(2) // 3 from the ad, 1 used

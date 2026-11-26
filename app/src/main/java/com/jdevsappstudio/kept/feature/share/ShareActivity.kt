@@ -12,7 +12,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.content.IntentCompat
 import com.jdevsappstudio.kept.MainActivity
-import com.jdevsappstudio.kept.core.designsystem.KeptTheme
+import com.jdevsappstudio.kept.core.presentation.KeptAppTheme
+import com.jdevsappstudio.kept.data.settings.SettingsStore
+import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 /**
@@ -21,6 +23,7 @@ import org.koin.androidx.viewmodel.ext.android.viewModel
  */
 class ShareActivity : ComponentActivity() {
     private val viewModel: ShareViewModel by viewModel()
+    private val settings: SettingsStore by inject()
 
     // The answer doesn't matter: without notifications the in-app strip still shows the reading.
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
@@ -29,7 +32,7 @@ class ShareActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         viewModel.start(payload(intent)) // no-op after a rotation: the VM already started
         setContent {
-            KeptTheme {
+            KeptAppTheme(settings, edgeToEdge = false) {
                 ShareRoot(viewModel, onOpenApp = ::openApp, onClose = ::finish, onAskNotifications = ::askNotifications)
             }
         }

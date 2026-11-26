@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -65,6 +64,8 @@ data class SaveDetailState(
 
 sealed interface SaveDetailAction {
     data object OnDeleteClick : SaveDetailAction
+    /** Back from k-cloud-out after a watched ad: the held fill goes (k-ad-rewarded -> k-link). */
+    data object OnAnswersGranted : SaveDetailAction
     data object OnReadAgainClick : SaveDetailAction
     data object OnConfirmDialog : SaveDetailAction
     data object OnDismissDialog : SaveDetailAction
@@ -82,6 +83,8 @@ sealed interface SaveDetailAction {
     data object OnAddScreenshotClick : SaveDetailAction
     /** The picker's result as a content URI string; null = cancelled (the save stays as it was). */
     data class OnScreenshotPicked(val ref: String?) : SaveDetailAction
+    /** k-recipe Copy ingredients: the Root put [count] lines on the clipboard; snackbar 'Copied 7 items'. */
+    data class OnCopied(val count: Int) : SaveDetailAction
 }
 
 sealed interface SaveDetailEvent {
@@ -89,7 +92,7 @@ sealed interface SaveDetailEvent {
     data object Close : SaveDetailEvent
     /** Open the photo picker for one image; send the result back as [SaveDetailAction.OnScreenshotPicked]. */
     data object PickScreenshot : SaveDetailEvent
-    /** 0 answers left: k-cloud-out. After an ad its Root sets [SaveDetailViewModel.KEY_ANSWERS_GRANTED] and the fill goes. */
+    /** 0 answers left: k-cloud-out. After an ad the Root sends [SaveDetailAction.OnAnswersGranted] and the fill goes. */
     data object OpenCloudOut : SaveDetailEvent
 }
 
@@ -132,17 +135,11 @@ class SaveDetailViewModel(
     val events = _events.receiveAsFlow()
 
     init {
-        // Back from k-cloud-out after a watched ad: the held fill goes (k-ad-rewarded -> k-link).
-        viewModelScope.launch {
-            savedStateHandle.getStateFlow(KEY_ANSWERS_GRANTED, false).filter { it }.collect {
-                savedStateHandle[KEY_ANSWERS_GRANTED] = false
-                if (pendingFill) startFill()
-            }
-        }
     }
 
     fun onAction(action: SaveDetailAction) {
         when (action) {
+            SaveDetailAction.OnAnswersGranted -> if (pendingFill) startFill()
             SaveDetailAction.OnDeleteClick -> {
                 val items = state.value.items.size
                 if (items >= 2) ui.update { it.copy(dialog = DetailDialog.ConfirmDelete(items)) } else delete()
@@ -185,6 +182,7 @@ class SaveDetailViewModel(
                 viewModelScope.launch { library.deleteItem(item.id) }
             }
             is SaveDetailAction.OnAddItem -> addItem(action.name.trim())
+            is SaveDetailAction.OnCopied -> snackbars.show(UiText.Plural(R.plurals.snack_copied_items, action.count, action.count))
             SaveDetailAction.OnEditClick, SaveDetailAction.OnOpenOriginalClick,
             SaveDetailAction.OnShareClick, SaveDetailAction.OnBackClick -> Unit
         }
@@ -266,6 +264,5 @@ class SaveDetailViewModel(
 
     companion object {
         const val ARG_ID = "id"
-        const val KEY_ANSWERS_GRANTED = "answersGranted"
     }
 }
