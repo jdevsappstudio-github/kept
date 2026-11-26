@@ -54,6 +54,7 @@ import com.jdevsappstudio.kept.feature.library.edit.EditSaveRoot
 import com.jdevsappstudio.kept.feature.library.list.SaveListRoot
 import com.jdevsappstudio.kept.feature.library.shelf.ShelfRoot
 import com.jdevsappstudio.kept.feature.search.SearchRoot
+import com.jdevsappstudio.kept.feature.sent.SentRoot
 import com.jdevsappstudio.kept.feature.library.shelves.ShelvesRoot
 import kotlin.reflect.KClass
 
@@ -222,7 +223,7 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
             composable<HowToRoute> { HowToRoot(onBack = { nav.popBackStack() }) }
             composable<SettingsRoute> { Stub("Settings", nav) }
             composable<NeedLookRoute> { Stub("Needs a look", nav) }
-            composable<SentRoute> { Stub("What was sent", nav) }
+            composable<SentRoute> { SentRoot(onBack = { nav.popBackStack() }) }
         }
     }
 }
