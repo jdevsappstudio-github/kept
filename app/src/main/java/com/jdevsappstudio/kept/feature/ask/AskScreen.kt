@@ -88,6 +88,7 @@ import com.jdevsappstudio.kept.core.model.AskRef
 import com.jdevsappstudio.kept.core.model.AskTurn
 import com.jdevsappstudio.kept.core.model.AskTurnStatus
 import com.jdevsappstudio.kept.core.model.SaveType
+import com.jdevsappstudio.kept.core.presentation.openEmail
 import com.jdevsappstudio.kept.core.presentation.ObserveAsEvents
 import org.koin.androidx.compose.koinViewModel
 
@@ -119,24 +120,11 @@ fun AskRoot(
             is AskEvent.OpenSave -> onOpenSave(event.saveId)
             is AskEvent.OpenSent -> onOpenSent(event.sentId)
             AskEvent.OpenCloudOut -> onOpenCloudOut()
-            is AskEvent.SendReport -> context.openReportEmail(event.email)
+            is AskEvent.SendReport -> context.openEmail(event.email)
             AskEvent.Close -> onClose()
         }
     }
     AskScreen(state, viewModel::onAction)
-}
-
-/** H40: the person's mail app, prefilled; nothing goes until they press Send there. */
-private fun Context.openReportEmail(email: ReportEmail) {
-    val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"))
-        .putExtra(Intent.EXTRA_EMAIL, arrayOf(email.to))
-        .putExtra(Intent.EXTRA_SUBJECT, email.subject)
-        .putExtra(Intent.EXTRA_TEXT, email.body)
-    try {
-        startActivity(intent)
-    } catch (_: ActivityNotFoundException) {
-        Toast.makeText(this, AskCopy.NO_MAIL_APP, Toast.LENGTH_SHORT).show()
-    }
 }
 
 @Composable

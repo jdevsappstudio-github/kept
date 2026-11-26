@@ -23,6 +23,9 @@ class ReadNotifications(private val context: Context) {
     private val manager = NotificationManagerCompat.from(context)
     private var channelMade = false
 
+    /** Settings' Reading updates switch (H68), mirrored here by KeptApplication; off = nothing is posted. */
+    @Volatile var readingUpdates = true
+
     fun canPost(): Boolean =
         manager.areNotificationsEnabled() &&
             (Build.VERSION.SDK_INT < 33 ||
@@ -47,7 +50,7 @@ class ReadNotifications(private val context: Context) {
 
     @SuppressLint("MissingPermission") // checked in canPost()
     private fun post(title: String, body: String, extra: NotificationCompat.Builder.() -> Unit = {}) {
-        if (!canPost()) return
+        if (!readingUpdates || !canPost()) return
         if (!channelMade) {
             manager.createNotificationChannel(
                 NotificationChannelCompat.Builder(CHANNEL, NotificationManagerCompat.IMPORTANCE_LOW)

@@ -1,5 +1,11 @@
 package com.jdevsappstudio.kept.navigation
 
+import com.jdevsappstudio.kept.feature.settings.AboutScreen
+import com.jdevsappstudio.kept.feature.settings.AppearanceRoot
+import com.jdevsappstudio.kept.feature.settings.LicencesScreen
+import com.jdevsappstudio.kept.feature.settings.PrivacyRoot
+import com.jdevsappstudio.kept.feature.settings.SettingsRoot
+import com.jdevsappstudio.kept.feature.settings.UnsupportedRoot
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -98,7 +104,6 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
                     onNeedLook = { nav.navigate(NeedLookRoute) },
                 )
             }
-            // Screens below are filled in by the next UI-sweep chunks (H51); until then each is a titled stub.
             composable<SearchRoute> {
                 SearchRoot(
                     onBack = { nav.popBackStack() },
@@ -222,7 +227,27 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
                 )
             }
             composable<HowToRoute> { HowToRoot(onBack = { nav.popBackStack() }) }
-            composable<SettingsRoute> { Stub("Settings", nav) }
+            composable<SettingsRoute> {
+                SettingsRoot(
+                    onBack = { nav.popBackStack() },
+                    onAppearance = { nav.navigate(AppearanceRoute) },
+                    onPrivacy = { nav.navigate(PrivacyRoute) },
+                    onAbout = { nav.navigate(AboutRoute) },
+                )
+            }
+            composable<AppearanceRoute> { AppearanceRoot(onBack = { nav.popBackStack() }) }
+            composable<PrivacyRoute> {
+                PrivacyRoot(
+                    onBack = { nav.popBackStack() },
+                    onSent = { nav.navigate(SentRoute()) },
+                    onUnsupported = { nav.navigate(UnsupportedRoute) },
+                    // H69: after Delete everything, the empty Home (its snackbar says so).
+                    onDeleted = { nav.popBackStack(HomeRoute, inclusive = false) },
+                )
+            }
+            composable<UnsupportedRoute> { UnsupportedRoot(onBack = { nav.popBackStack() }) }
+            composable<AboutRoute> { AboutScreen(onBack = { nav.popBackStack() }, onLicences = { nav.navigate(LicencesRoute) }) }
+            composable<LicencesRoute> { LicencesScreen(onBack = { nav.popBackStack() }) }
             composable<NeedLookRoute> {
                 NeedLookRoot(
                     onBack = { nav.popBackStack() },
@@ -287,15 +312,3 @@ private fun KeptBottomBar(destination: NavDestination?, nav: NavHostController) 
     }
 }
 
-/** Placeholder for a screen not built yet in the sweep. */
-@Composable
-private fun Stub(title: String, nav: NavHostController, back: Boolean = true) {
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)) {
-        if (back) KeptIconButton(Icons.AutoMirrored.Outlined.ArrowBack, "Back", onClick = { nav.popBackStack() })
-        VSpace(16.dp)
-        Text(title, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
-        Box(Modifier.padding(top = 8.dp)) {
-            Text("Coming in the UI sweep.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}

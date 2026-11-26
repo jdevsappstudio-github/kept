@@ -234,6 +234,14 @@ class FakeSettings : SettingsStore {
     override suspend fun addRecentSearch(text: String) { recentSearches.value = SettingsStore.pushRecent(recentSearches.value, text) }
     override val dismissedSuggestions = MutableStateFlow<Set<String>>(emptySet())
     override suspend fun dismissSuggestion(tag: String) { dismissedSuggestions.value += tag }
+    override val themeMode = MutableStateFlow(com.jdevsappstudio.kept.core.model.ThemeMode.SYSTEM)
+    override suspend fun setThemeMode(mode: com.jdevsappstudio.kept.core.model.ThemeMode) { themeMode.value = mode }
+    override val readingUpdates = MutableStateFlow(true)
+    override suspend fun setReadingUpdates(on: Boolean) { readingUpdates.value = on }
+    override suspend fun clearContent() {
+        recentSearches.value = emptyList()
+        dismissedSuggestions.value = emptySet()
+    }
 }
 
 /** Snackbars whose Undo runs at once. */

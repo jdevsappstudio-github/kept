@@ -15,6 +15,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.koin.core.context.startKoin
 import com.jdevsappstudio.kept.data.library.LibraryLocalDataSource
+import com.jdevsappstudio.kept.data.queue.ReadNotifications
+import com.jdevsappstudio.kept.data.settings.SettingsStore
 
 class KeptApplication : Application(), Configuration.Provider {
     // WorkManager starts lazily on first use (the manifest removes its startup initializer) with Koin's factory.
@@ -39,6 +41,14 @@ class KeptApplication : Application(), Configuration.Provider {
             koin.get<ReadQueue>().start()
             // Deletes whose Undo window has long passed (snackbar can't outlive the process).
             koin.get<LibraryLocalDataSource>().purgeStale()
+        }
+        // Reading updates (H68): the notice follows the switch; turning it off clears one that is showing.
+        koin.get<CoroutineScope>(APP_SCOPE).launch {
+            val notices = koin.get<ReadNotifications>()
+            koin.get<SettingsStore>().readingUpdates.collect { on ->
+                notices.readingUpdates = on
+                if (!on) notices.cancel()
+            }
         }
     }
 }

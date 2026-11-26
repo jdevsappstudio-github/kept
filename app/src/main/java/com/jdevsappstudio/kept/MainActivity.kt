@@ -7,7 +7,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.jdevsappstudio.kept.core.designsystem.KeptTheme
+import com.jdevsappstudio.kept.core.presentation.KeptAppTheme
+import com.jdevsappstudio.kept.data.settings.SettingsStore
+import org.koin.android.ext.android.inject
 import com.jdevsappstudio.kept.navigation.KeptNavHost
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -15,6 +17,7 @@ class MainActivity : ComponentActivity() {
 
     /** A save to open from the share sheet ('Open it' / 'Add a title'); cleared once the detail is shown. */
     private val openSave = MutableStateFlow<Long?>(null)
+    private val settings: SettingsStore by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -22,7 +25,7 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) readSaveId(intent)
         setContent {
             val save by openSave.collectAsStateWithLifecycle()
-            KeptTheme {
+            KeptAppTheme(settings) {
                 KeptNavHost(openSave = save, onSaveOpened = { openSave.value = null })
             }
         }

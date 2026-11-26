@@ -88,6 +88,10 @@ import com.jdevsappstudio.kept.data.sent.RoomSentLogDataSource
 import com.jdevsappstudio.kept.data.sent.SentLogLocalDataSource
 import com.jdevsappstudio.kept.feature.ask.AskViewModel
 import com.jdevsappstudio.kept.feature.sent.SentViewModel
+import com.jdevsappstudio.kept.data.wipe.AndroidContentWiper
+import com.jdevsappstudio.kept.data.wipe.ContentWiper
+import com.jdevsappstudio.kept.feature.settings.PrivacyViewModel
+import com.jdevsappstudio.kept.feature.settings.SettingsViewModel
 
 val IMAGE_DISPATCHER = named("image")
 val APP_SCOPE = named("appScope")
@@ -171,6 +175,16 @@ val appModule = module {
     }
     viewModel { AskViewModel(get(), get(), get(), get(), get(), get<NetworkStatus>().online, BuildConfig.VERSION_NAME) }
     viewModel { SentViewModel(get(), get()) }
+    // Settings (H68, H69).
+    single<ContentWiper> { AndroidContentWiper(androidContext(), get(), get(), get(), Dispatchers.IO) }
+    viewModel { SettingsViewModel(get(), get<CardReader>()::deviceModelState) }
+    viewModel {
+        val quota = get<CloudQuota>()
+        PrivacyViewModel(
+            get(), get(), get(), get(), get(), get<SaveLocalDataSource>().observeCounts(), get<CardReader>()::deviceModelState,
+            reads = quota.observe(CloudMeter.READS), answers = quota.observe(CloudMeter.ANSWERS),
+        )
+    }
     // Fill in with cloud (H59): URL context on a caption-only link, 1 answer.
     single<PageFiller> { FirebasePageFiller(BuildConfig.HAS_FIREBASE, RemoteReadModelConfig.forFill(get())) }
     single<FillRepository> {

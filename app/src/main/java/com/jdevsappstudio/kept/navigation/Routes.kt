@@ -31,6 +31,12 @@ import kotlinx.serialization.Serializable
 @Serializable data class ReadingRoute(val since: Long)
 @Serializable data object HowToRoute
 @Serializable data object SettingsRoute
+@Serializable data object AppearanceRoute
+@Serializable data object PrivacyRoute
+/** k-unsupported: no Nano on this phone (H69). */
+@Serializable data object UnsupportedRoute
+@Serializable data object AboutRoute
+@Serializable data object LicencesRoute
 @Serializable data object NeedLookRoute
 /** k-cloud-out: CloudOutViewModel.ARG_METER = "meter" (a CloudMeter name; reads come from Needs a look). */
 @Serializable data class CloudOutRoute(val meter: String = "ANSWERS")

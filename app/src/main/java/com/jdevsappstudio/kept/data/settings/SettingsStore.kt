@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.jdevsappstudio.kept.core.model.ListLayout
+import com.jdevsappstudio.kept.core.model.ThemeMode
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -35,6 +36,17 @@ interface SettingsStore {
     /** H26 / H55: tags whose collection suggestion got Not now; never suggested again. */
     val dismissedSuggestions: Flow<Set<String>>
     suspend fun dismissSuggestion(tag: String)
+
+    /** k-appearance (H68): System (default), Light or Dark. */
+    val themeMode: Flow<ThemeMode>
+    suspend fun setThemeMode(mode: ThemeMode)
+
+    /** k-settings 'Reading updates' (H43): the one Kept notification. On by default; Android's own switch still wins. */
+    val readingUpdates: Flow<Boolean>
+    suspend fun setReadingUpdates(on: Boolean)
+
+    /** Delete everything (H69): forgets recent searches and dismissed suggestions; real settings stay. */
+    suspend fun clearContent()
 
     companion object {
         const val RECENT_SEARCHES = 5
@@ -97,7 +109,30 @@ class DataStoreSettingsStore(private val context: Context) : SettingsStore {
         context.settings.edit { it[DISMISSED] = it[DISMISSED].orEmpty() + tag }
     }
 
+    override val themeMode: Flow<ThemeMode> = context.settings.data
+        .map { p -> ThemeMode.entries.firstOrNull { it.name == p[THEME_MODE] } ?: ThemeMode.SYSTEM }
+        .distinctUntilChanged()
+
+    override suspend fun setThemeMode(mode: ThemeMode) {
+        context.settings.edit { it[THEME_MODE] = mode.name }
+    }
+
+    override val readingUpdates: Flow<Boolean> = context.settings.data.map { it[READING_UPDATES] ?: true }.distinctUntilChanged()
+
+    override suspend fun setReadingUpdates(on: Boolean) {
+        context.settings.edit { it[READING_UPDATES] = on }
+    }
+
+    override suspend fun clearContent() {
+        context.settings.edit {
+            it.remove(RECENT)
+            it.remove(DISMISSED)
+        }
+    }
+
     private companion object {
+        val THEME_MODE = stringPreferencesKey("theme_mode")
+        val READING_UPDATES = booleanPreferencesKey("reading_updates")
         val DISMISSED = stringSetPreferencesKey("dismissed_suggestions")
         val RECENT = stringPreferencesKey("recent_searches")
         /** Searches are trimmed to single spaces, so a newline never occurs inside one. */
