@@ -31,11 +31,14 @@ object SettingsCopy {
     const val DELETE_TITLE = "Delete everything?"
     const val DELETE_DONE = "Everything deleted"
 
-    const val UNSUPPORTED_TITLE = "This phone reads with Gemini in the cloud"
-    const val UNSUPPORTED_BODY =
-        "No on-device AI (Gemini Nano), so Kept sends the screenshot images and text of your saves to Google Gemini " +
+    const val UNSUPPORTED_TITLE = "Reads with Gemini in the cloud"
+    /** H72: one visible line; the full text is behind 'What's sent?' ([UNSUPPORTED_DETAILS] + [unsupportedLimits]). */
+    fun unsupportedBody(reads: MeterView?): String =
+        "Your saves go to Google to be read." + (reads?.let { " Free: ${it.limit} a day." } ?: "")
+    const val UNSUPPORTED_DETAILS =
+        "No on-device AI (Gemini Nano) here, so Kept sends the screenshot images and text of your saves to Google Gemini " +
             "to be read. Screenshots can hold private details: messages, addresses, codes."
-    const val UNSUPPORTED_HAND = "By hand, nothing leaves the phone. Change it any time in Privacy."
+    const val UNSUPPORTED_HAND = "By hand, nothing leaves the phone."
 
     fun appearanceLine(mode: ThemeMode) = "${mode.label} mode"
 

@@ -63,38 +63,28 @@ object OnboardingRules {
     // --- k-promise / k-promise-cloud
 
     const val PROMISE_TITLE = "Your saves,\nfinally useful."
-    const val PROMISE_BODY = "Share a reel, post or screenshot to Kept. It reads every word, tags it, and helps you find and use it later."
-
-    data class PromiseRow(val title: String, val body: String)
-
-    fun promiseRows(cloudPhone: Boolean): List<PromiseRow> = if (cloudPhone) listOf(
-        PromiseRow("Read by Gemini, or by hand", "No on-device AI here, so you choose. Every card says which."),
-        PromiseRow("Tagged and searchable", "Recipe, place, event… tags you can change, search over every word, one tap to use each."),
-        PromiseRow("Ask your saves", "Only when you tap Ask. Every answer says where it came from."),
-    ) else listOf(
-        PromiseRow("Read on this phone", "The AI runs on your phone. Your images never leave it."),
-        PromiseRow("Tagged and searchable", "Recipe, place, event… tags you can change, search over every word, one tap to use each."),
-        PromiseRow("Cloud only when you ask", "And every answer says where it came from."),
+    /** H72: headline + icon rows of a few words; people don't read onboarding paragraphs. */
+    fun promiseRows(cloudPhone: Boolean): List<String> = listOf(
+        if (cloudPhone) "Reads every screenshot" else "Reads on your phone",
+        "Tags it for you",
+        "Find it, ask it, use it",
     )
 
-    fun promiseFoot(cloudPhone: Boolean): String =
-        if (cloudPhone) "No account. Phones with Gemini Nano read on the phone." else "No account needed."
+    const val PROMISE_FOOT = "No account needed."
 
     // --- B1, B2, k-ob-first
 
-    const val B1_HELLO = "Two taps, one share, and you’ll see it work."
     const val B1_TITLE = "What do you save most?"
-    const val B1_BODY = "Pick up to three. Those tags come first on your home."
+    const val B1_BODY = "Pick up to 3."
     const val B2_TITLE = "Where do you save from?"
-    const val B2_BODY = "We show you how to share from those apps."
 
     fun firstSaveBody(apps: List<ShareApp>, openable: ShareApp?): String {
         val pick = "Pick a screenshot you meant to come back to."
         val or = when (openable) {
-            ShareApp.INSTAGRAM -> " Or in Instagram, screenshot a reel or post you liked and share it to Kept."
-            ShareApp.YOUTUBE -> " Or in YouTube, tap Share under a video and pick Kept."
-            ShareApp.WHATSAPP -> " Or in WhatsApp, share a photo or a link to Kept."
-            else -> if (apps.isEmpty() || ShareApp.OTHER in apps) " Or share one from any app: tap Share, then Kept." else ""
+            ShareApp.INSTAGRAM -> " Or share one from Instagram."
+            ShareApp.YOUTUBE -> " Or share a video from YouTube."
+            ShareApp.WHATSAPP -> " Or share one from WhatsApp."
+            else -> if (apps.isEmpty() || ShareApp.OTHER in apps) " Or share from any app." else ""
         }
         return pick + or
     }
@@ -102,12 +92,12 @@ object OnboardingRules {
     fun shareTip(apps: List<ShareApp>): ShareTip = when (val app = apps.firstOrNull()) {
         ShareApp.INSTAGRAM -> ShareTip(
             app, "From Instagram",
-            "Screenshot a reel or post, then share the screenshot to Kept. Sharing the link works too, but gives Kept only the caption.",
+            "Screenshot a reel, then share the screenshot to Kept.",
         )
-        ShareApp.YOUTUBE -> ShareTip(app, "From YouTube", "Tap Share under a video, then Kept. Kept reads the title and description, not the video.")
-        ShareApp.WHATSAPP -> ShareTip(app, "From WhatsApp", "Long-press a photo or link, tap Share, then Kept.")
-        ShareApp.SCREENSHOTS -> ShareTip(app, "From your screenshots", "Pick the ones you meant to come back to. Kept only sees what you pick.")
-        ShareApp.OTHER, null -> ShareTip(app, "From any app", "On a reel, post or page, tap Share, then Kept.")
+        ShareApp.YOUTUBE -> ShareTip(app, "From YouTube", "Tap Share under a video, then Kept.")
+        ShareApp.WHATSAPP -> ShareTip(app, "From WhatsApp", "Long-press, tap Share, then Kept.")
+        ShareApp.SCREENSHOTS -> ShareTip(app, "From your screenshots", "Pick the ones you meant to come back to.")
+        ShareApp.OTHER, null -> ShareTip(app, "From any app", "Tap Share, then Kept.")
     }
 
     // --- First card (k-ob-got*)
@@ -126,8 +116,7 @@ object OnboardingRules {
         return when (save.readBy) {
             ReadBy.DEVICE -> "Read on this phone$inSecs. Nothing left it."
             ReadBy.CLOUD -> {
-                val what = if (save.imagePath != null) "this screenshot" else "the shared text"
-                "Read by Google Gemini in the cloud$inSecs. Sent: $what. Privacy lists it."
+                "Read by Gemini in the cloud$inSecs."
             }
             ReadBy.HAND, null -> null
         }
@@ -136,13 +125,13 @@ object OnboardingRules {
     /** Under a card that isn't read yet, or couldn't be. */
     fun pendingLine(save: Save, device: DeviceModelState?, pause: QueuePause, cloudHelp: Boolean): String = when {
         save.status == SaveStatus.NEEDS_LOOK -> NeedLookRules.failCopy(save.failReason, cloudHelp).line
-        save.status == SaveStatus.READING -> "Reading it now. This takes a few seconds."
+        save.status == SaveStatus.READING -> "Reading it now…"
         pause == QueuePause.NEEDS_CONSENT && device.gettingReady() -> "It’s kept. Reading starts once your phone’s AI is ready."
-        pause == QueuePause.NEEDS_CONSENT -> "It’s kept. Cloud help is off, so nothing leaves the phone. You can tag it by hand."
+        pause == QueuePause.NEEDS_CONSENT -> "It’s kept. Cloud help is off: tag it by hand."
         pause == QueuePause.OFFLINE -> "It’s kept. Reading starts when you’re back online."
         pause == QueuePause.CLOUD_CAP -> "It’s kept. Today’s cloud reads are used up, so it’s read after midnight."
         pause == QueuePause.NOT_SET_UP -> "It’s kept. Reading isn’t set up in this build."
-        else -> "Reading it now. This takes a few seconds."
+        else -> "Reading it now…"
     }
 
     /** Tag it by hand: offered when Kept won't read it on its own. */

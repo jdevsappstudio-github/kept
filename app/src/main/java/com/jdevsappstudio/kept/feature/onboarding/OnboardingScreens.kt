@@ -91,14 +91,13 @@ fun PromiseScreen(state: OnboardingState, onAction: (OnboardingAction) -> Unit) 
             OnboardingRules.PROMISE_TITLE, style = MaterialTheme.typography.displaySmall,
             color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.semantics { heading() },
         )
-        Body(OnboardingRules.PROMISE_BODY)
         if (state.device != null) {
             val icons = if (state.cloudPhone) {
                 listOf(Icons.Outlined.Cloud, Icons.Outlined.GridView, Icons.Outlined.ChatBubbleOutline)
             } else {
                 listOf(Icons.Outlined.PhoneAndroid, Icons.Outlined.GridView, Icons.Outlined.Cloud)
             }
-            OnboardingRules.promiseRows(state.cloudPhone).forEachIndexed { i, row -> PromiseRow(icons[i], row.title, row.body) }
+            OnboardingRules.promiseRows(state.cloudPhone).forEachIndexed { i, row -> PromiseRow(icons[i], row) }
         } else {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
@@ -109,24 +108,21 @@ fun PromiseScreen(state: OnboardingState, onAction: (OnboardingAction) -> Unit) 
         PrimaryButton("Get started", enabled = state.device != null) { onAction(OnboardingAction.OnGetStarted) }
         LinkButton("How Kept uses AI") { onAction(OnboardingAction.OnHowKeptUsesAi) }
         Text(
-            OnboardingRules.promiseFoot(state.cloudPhone), style = MaterialTheme.typography.bodyMedium,
+            OnboardingRules.PROMISE_FOOT, style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
         )
     }
 }
 
 @Composable
-private fun PromiseRow(icon: ImageVector, title: String, body: String) {
-    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+private fun PromiseRow(icon: ImageVector, title: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(
             Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surface)
                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center,
         ) { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(22.dp)) }
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-            Body(body)
-        }
+        Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
     }
 }
 
@@ -136,10 +132,6 @@ private fun PromiseRow(icon: ImageVector, title: String, body: String) {
 fun TypesScreen(state: OnboardingState, onAction: (OnboardingAction) -> Unit) {
     Page {
         StepHeader(1, onBack = null, onSkip = { onAction(OnboardingAction.OnSkip) })
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            KeptMark(44.dp)
-            Body(OnboardingRules.B1_HELLO)
-        }
         Title(OnboardingRules.B1_TITLE)
         Body(OnboardingRules.B1_BODY)
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -185,7 +177,6 @@ fun AppsScreen(state: OnboardingState, onAction: (OnboardingAction) -> Unit) {
     Page {
         StepHeader(2, onBack = { onAction(OnboardingAction.OnBack) }, onSkip = { onAction(OnboardingAction.OnSkip) })
         Title(OnboardingRules.B2_TITLE)
-        Body(OnboardingRules.B2_BODY)
         Column(Modifier.fillMaxWidth().card(MaterialTheme.colorScheme.surface, 1.dp)) {
             ShareApp.entries.forEachIndexed { i, app ->
                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)))
@@ -228,9 +219,8 @@ internal fun ShareApp.icon(): ImageVector = when (this) {
 fun FirstSaveScreen(state: OnboardingState, openable: ShareApp?, onAction: (OnboardingAction) -> Unit) {
     Page {
         StepHeader(3, onBack = { onAction(OnboardingAction.OnBack) }, onSkip = { onAction(OnboardingAction.OnSkip) })
-        Title("That’s how it works")
         ExampleCard(state)
-        Text("Now your first real save", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
+        Text("Now save your first thing", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
         Body(OnboardingRules.firstSaveBody(state.apps, openable))
         PrimaryButton("Pick a screenshot", icon = Icons.Outlined.AddPhotoAlternate, enabled = !state.adding) { onAction(OnboardingAction.OnPick) }
         if (openable != null) {
@@ -269,7 +259,7 @@ private fun ExampleCard(state: OnboardingState) {
             .background(Brush.verticalGradient(listOf(Color(0xFFE7A35A), Color(0xFFB4632F), Color(0xFF4A2618)))),
     ) {
         Column(Modifier.align(Alignment.BottomStart).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("EXAMPLE · FROM A SCREENSHOT · NOT SAVED", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.85f))
+            Text("EXAMPLE", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.85f))
             Text("Paneer tikka, air-fryer", style = MaterialTheme.typography.headlineSmall, color = Color.White)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 TagPill(SaveType.RECIPE.label, icon = typeIcon(SaveType.RECIPE), onDark = true)

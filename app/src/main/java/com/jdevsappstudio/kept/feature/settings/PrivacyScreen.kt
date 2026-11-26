@@ -1,5 +1,9 @@
 package com.jdevsappstudio.kept.feature.settings
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -171,6 +175,7 @@ fun UnsupportedRoot(onBack: () -> Unit, onDone: () -> Unit = onBack, viewModel: 
 /** k-unsupported (H69): the page names images and private details, so Read with cloud is the consent itself. */
 @Composable
 fun UnsupportedScreen(state: PrivacyState, onAction: (PrivacyAction) -> Unit) {
+    var details by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
         KeptTopBar("", onBack = { onAction(PrivacyAction.OnBack) })
         Column(
@@ -181,16 +186,11 @@ fun UnsupportedScreen(state: PrivacyState, onAction: (PrivacyAction) -> Unit) {
                 Icon(Icons.Outlined.Cloud, contentDescription = null, tint = Kept.colors.cloud, modifier = Modifier.size(28.dp))
             }
             Text(SettingsCopy.UNSUPPORTED_TITLE, style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.onBackground)
-            Text(SettingsCopy.UNSUPPORTED_BODY, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(
-                Modifier.fillMaxWidth().card(MaterialTheme.colorScheme.surface, 1.dp).padding(14.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Icon(Icons.Outlined.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-                Text(
-                    SettingsCopy.unsupportedLimits(state.reads, state.answers),
-                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface,
-                )
+            Text(SettingsCopy.unsupportedBody(state.reads), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // H72: the full disclosure is one tap away, before Read with cloud.
+            TextButton(onClick = { details = true }, contentPadding = PaddingValues(0.dp)) {
+                Icon(Icons.Outlined.Info, contentDescription = null, modifier = Modifier.size(18.dp))
+                Text("What’s sent?", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 6.dp))
             }
             Button(
                 onClick = { onAction(PrivacyAction.OnReadWithCloud) }, shape = ButtonShape,
@@ -214,6 +214,14 @@ fun UnsupportedScreen(state: PrivacyState, onAction: (PrivacyAction) -> Unit) {
                 Text("Privacy policy", style = MaterialTheme.typography.titleSmall, textDecoration = TextDecoration.Underline)
             }
         }
+    }
+    if (details) {
+        AlertDialog(
+            onDismissRequest = { details = false },
+            title = { Text("What’s sent") },
+            text = { Text(SettingsCopy.UNSUPPORTED_DETAILS + "\n\n" + SettingsCopy.unsupportedLimits(state.reads, state.answers)) },
+            confirmButton = { TextButton(onClick = { details = false }) { Text("Got it") } },
+        )
     }
 }
 

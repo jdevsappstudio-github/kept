@@ -75,7 +75,7 @@ class OnboardingRulesTest {
         val device = save(1, readBy = ReadBy.DEVICE).copy(createdAt = 10_000, readAt = 14_200)
         assertThat(OnboardingRules.readLine(device)).isEqualTo("Read on this phone in 4 seconds. Nothing left it.")
         val cloud = save(2, readBy = ReadBy.CLOUD).copy(createdAt = 0, readAt = 5_000, imagePath = "/x.jpg")
-        assertThat(OnboardingRules.readLine(cloud)).isEqualTo("Read by Google Gemini in the cloud in 5 seconds. Sent: this screenshot. Privacy lists it.")
+        assertThat(OnboardingRules.readLine(cloud)).isEqualTo("Read by Gemini in the cloud in 5 seconds.")
         // A long wait in line isn't 'reading time': the seconds are left out.
         val waited = device.copy(readAt = device.createdAt + 600_000)
         assertThat(OnboardingRules.readLine(waited)).isEqualTo("Read on this phone. Nothing left it.")
