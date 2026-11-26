@@ -42,6 +42,8 @@ import com.jdevsappstudio.kept.feature.add.ReadingRoot
 import com.jdevsappstudio.kept.core.designsystem.KeptIconButton
 import com.jdevsappstudio.kept.core.designsystem.VSpace
 import com.jdevsappstudio.kept.core.presentation.KeptSnackbarHost
+import com.jdevsappstudio.kept.feature.collections.CollectionNameRoot
+import com.jdevsappstudio.kept.feature.collections.CollectionRoot
 import com.jdevsappstudio.kept.feature.home.HomeRoot
 import com.jdevsappstudio.kept.feature.library.detail.SaveDetailRoot
 import com.jdevsappstudio.kept.feature.library.edit.EditSaveRoot
@@ -137,8 +139,35 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
                 )
             }
             composable<CloudOutRoute> { Stub("Out of cloud answers", nav) }
-            composable<CollectionRoute> { Stub("Collection", nav) }
-            composable<CollectionNameRoute> { Stub("New collection", nav) }
+            composable<CollectionRoute> { entry ->
+                val id = entry.toRoute<CollectionRoute>().collectionId
+                CollectionRoot(
+                    collectionId = id,
+                    onBack = { nav.popBackStack() },
+                    onOpenSave = { nav.navigate(SaveDetailRoute(it)) },
+                    onAddSaves = { nav.navigate(SearchRoute(pickInto = it)) },
+                    onRename = { nav.navigate(CollectionNameRoute(renameCollectionId = it)) },
+                )
+            }
+            // k-newcol: a sheet over home, the edit sheet or a collection.
+            dialog<CollectionNameRoute>(
+                dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+            ) {
+                CollectionNameRoot(
+                    onClose = { nav.popBackStack() },
+                    onCreated = { id ->
+                        val caller = nav.previousBackStackEntry
+                        if (caller?.destination?.hasRoute<EditSaveRoute>() == true) {
+                            // The edit sheet ticks it.
+                            caller.savedStateHandle[KEY_CREATED_COLLECTION] = id
+                            nav.popBackStack()
+                        } else {
+                            // Home / onboarding: open the new, empty collection in the sheet's place.
+                            nav.navigate(CollectionRoute(id)) { popUpTo<CollectionNameRoute> { inclusive = true } }
+                        }
+                    },
+                )
+            }
             // k-addmenu: a sheet over Home, so a dialog destination; whatever it opens replaces it on the stack.
             dialog<AddRoute>(
                 dialogProperties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
