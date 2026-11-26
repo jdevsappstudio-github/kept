@@ -14,7 +14,7 @@ data class ReadingRowCopy(val title: String, val body: String, val opensUnsuppor
 /** Copy for k-settings, k-appearance, k-privacy, k-unsupported and About (H68, H69). Pure, so it is JVM-tested. */
 object SettingsCopy {
     const val REPO_URL = "https://github.com/jdevsappstudio-github/kept"
-    const val PRIVACY_URL = "$REPO_URL/blob/main/PRIVACY.md"
+    const val PRIVACY_URL = "https://jdevsappstudio.com/kept/privacy-policy.html"
     const val LICENSE_URL = "$REPO_URL/blob/main/LICENSE"
 
     const val READING_UPDATES_BODY = "Tell me when saves wait to be read"
