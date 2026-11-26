@@ -139,7 +139,7 @@ private fun ShareState.body(): UiText? = when (phase) {
     SharePhase.KEEPING -> if (total > 1) UiText.Res(R.string.share_progress, done, total) else null
     SharePhase.KEPT -> when (route) {
         ReadRoute.DEVICE -> UiText.Res(R.string.share_route_device)
-        ReadRoute.CLOUD -> UiText.Res(R.string.share_route_cloud)
+        ReadRoute.CLOUD -> UiText.Res(if (readsOut) R.string.share_route_reads_out else R.string.share_route_cloud)
         ReadRoute.OFFLINE -> UiText.Res(R.string.share_route_offline)
         ReadRoute.NEEDS_CONSENT -> UiText.Res(R.string.share_route_consent)
         null -> null

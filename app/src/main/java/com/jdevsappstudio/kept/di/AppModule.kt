@@ -117,7 +117,7 @@ val appModule = module {
     single<ImageCopier> { SaveFilesCopier(get()) }
     single { Keeper(get(), get()) }
     single<ClipboardLinks> { AndroidClipboard(androidContext()) }
-    viewModel { ShareViewModel(get(), get(), get()) }
+    viewModel { ShareViewModel(get(), get(), get(), get()) }
     // App-scoped work (read queue). SupervisorJob: one failure never cancels the rest; the handler logs instead of crashing.
     single(APP_SCOPE) {
         CoroutineScope(SupervisorJob() + Dispatchers.Default + CoroutineExceptionHandler { _, e -> Log.e("Kept", "app scope", e) })
