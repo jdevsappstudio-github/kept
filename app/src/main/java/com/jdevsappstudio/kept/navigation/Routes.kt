@@ -33,3 +33,5 @@ import kotlinx.serialization.Serializable
 @Serializable data object SettingsRoute
 @Serializable data object NeedLookRoute
 @Serializable data object CloudOutRoute
+/** k-sent, opened at one request from an answer's Cloud chip (null = the whole log, from Privacy). */
+@Serializable data class SentRoute(val sentId: Long? = null)

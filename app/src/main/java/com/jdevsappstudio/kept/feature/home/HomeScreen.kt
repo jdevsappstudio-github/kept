@@ -83,7 +83,6 @@ import com.jdevsappstudio.kept.core.model.Shelf
 import com.jdevsappstudio.kept.core.model.TypeChip
 import com.jdevsappstudio.kept.core.presentation.ObserveAsEvents
 import com.jdevsappstudio.kept.feature.add.AddDebug
-import com.jdevsappstudio.kept.feature.ask.AskDebug
 import com.jdevsappstudio.kept.feature.library.detail.FillDebug
 import com.jdevsappstudio.kept.feature.quota.QuotaDebug
 import com.jdevsappstudio.kept.feature.search.SearchDebug
@@ -476,7 +475,6 @@ private fun DebugPanel(state: HomeState, onAction: (HomeAction) -> Unit) {
         AddDebug()
         QuotaDebug()
         SearchDebug()
-        AskDebug()
         FillDebug()
         ReaderSpikeRoot()
     }

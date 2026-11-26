@@ -2,6 +2,8 @@ package com.jdevsappstudio.kept.navigation
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -37,6 +39,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.toRoute
 import com.jdevsappstudio.kept.feature.add.AddRoot
+import com.jdevsappstudio.kept.feature.ask.AskRoot
 import com.jdevsappstudio.kept.feature.add.HowToRoot
 import com.jdevsappstudio.kept.feature.add.ReadingRoot
 import com.jdevsappstudio.kept.core.designsystem.KeptIconButton
@@ -75,7 +78,9 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
         snackbarHost = { KeptSnackbarHost() },
         containerColor = MaterialTheme.colorScheme.background,
     ) { inner ->
-        NavHost(nav, startDestination = HomeRoute, modifier = Modifier.padding(bottom = inner.calculateBottomPadding())) {
+        // Bottom only is consumed, so a screen's imePadding() lifts its input just above the keyboard, not bar-height above it.
+        val bottom = PaddingValues(bottom = inner.calculateBottomPadding())
+        NavHost(nav, startDestination = HomeRoute, modifier = Modifier.padding(bottom).consumeWindowInsets(bottom)) {
             composable<HomeRoute> {
                 HomeRoot(
                     onOpenList = { type -> nav.navigate(SaveListRoute(type?.wire)) },
@@ -100,7 +105,14 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
                     onOpenAsk = { nav.navigate(AskRoute(question = it)) },
                 )
             }
-            composable<AskRoute> { Stub("Ask", nav, back = false) }
+            composable<AskRoute> {
+                AskRoot(
+                    onOpenSave = { nav.navigate(SaveDetailRoute(it)) },
+                    onOpenSent = { nav.navigate(SentRoute(it)) },
+                    onOpenCloudOut = { nav.navigate(CloudOutRoute) },
+                    onClose = { nav.popBackStack() },
+                )
+            }
             composable<SaveListRoute> {
                 SaveListRoot(
                     onBack = { nav.popBackStack() },
@@ -192,6 +204,7 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
             composable<HowToRoute> { HowToRoot(onBack = { nav.popBackStack() }) }
             composable<SettingsRoute> { Stub("Settings", nav) }
             composable<NeedLookRoute> { Stub("Needs a look", nav) }
+            composable<SentRoute> { Stub("What was sent", nav) }
         }
     }
 }

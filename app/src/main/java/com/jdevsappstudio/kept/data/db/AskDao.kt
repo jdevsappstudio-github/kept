@@ -21,7 +21,8 @@ abstract class AskDao {
 
     /** Refs to saves that still show (soft-deleted ones hide at once, before the purge removes the row). */
     @Query(
-        "SELECT ask_refs.turnId, ask_refs.position, saves.id AS saveId, saves.title, saves.type FROM ask_refs " +
+        "SELECT ask_refs.turnId, ask_refs.position, saves.id AS saveId, saves.title, saves.type, saves.thumbPath, " +
+            "saves.summary, saves.place FROM ask_refs " +
             "JOIN saves ON saves.id = ask_refs.saveId WHERE saves.deletedAt IS NULL ORDER BY ask_refs.turnId, ask_refs.position",
     )
     abstract fun observeRefs(): Flow<List<AskRefRow>>
@@ -130,7 +131,16 @@ abstract class AskDao {
     abstract suspend fun topTags(limit: Int): List<TagCountRow>
 }
 
-data class AskRefRow(val turnId: Long, val position: Int, val saveId: Long, val title: String, val type: String)
+data class AskRefRow(
+    val turnId: Long,
+    val position: Int,
+    val saveId: Long,
+    val title: String,
+    val type: String,
+    val thumbPath: String? = null,
+    val summary: String = "",
+    val place: String = "",
+)
 
 data class AskSourceRow(
     @Embedded val save: SaveEntity,
