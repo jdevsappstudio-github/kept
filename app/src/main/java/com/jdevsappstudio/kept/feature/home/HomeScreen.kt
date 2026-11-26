@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -60,6 +61,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.jdevsappstudio.kept.BuildConfig
+import com.jdevsappstudio.kept.core.designsystem.PillShape
 import com.jdevsappstudio.kept.core.designsystem.ButtonShape
 import com.jdevsappstudio.kept.core.designsystem.CardShape
 import com.jdevsappstudio.kept.core.designsystem.HintCard
@@ -152,7 +154,9 @@ fun HomeScreen(state: HomeState, onAction: (HomeAction) -> Unit) {
             state.isEmpty -> item(key = "empty") { state.ready?.let { ReadyHome(it, onAction) } ?: EmptyHome(onAction) }
             else -> {
                 item(key = "header") { Header(state) }
-                if (state.lines.isNotEmpty()) item(key = "lines") { StatusLines(state.lines, onAction) }
+                if (state.lines.isNotEmpty() || state.examples.isNotEmpty()) {
+                    item(key = "lines") { StatusLines(state.lines, state.examples.size, onAction) }
+                }
                 item(key = "chips") { TypeChips(state.chips, state.total, onAction) }
                 state.hero?.let { hero -> item(key = "hero") { HeroCard(hero) { onAction(HomeAction.OnSaveClick(hero.id)) } } }
                 item(key = "shelves") {
@@ -209,8 +213,9 @@ private fun Header(state: HomeState) {
 }
 
 @Composable
-private fun StatusLines(lines: List<HomeLine>, onAction: (HomeAction) -> Unit) {
+private fun StatusLines(lines: List<HomeLine>, examples: Int, onAction: (HomeAction) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (examples > 0) ExamplesLine(examples, onAction)
         lines.forEach { line ->
             val (text, color) = when (line) {
                 is HomeLine.Reading -> "Reading ${line.current} of ${line.total}" + when (line.with) {
@@ -227,6 +232,35 @@ private fun StatusLines(lines: List<HomeLine>, onAction: (HomeAction) -> Unit) {
             Text(text, style = MaterialTheme.typography.labelMedium, color = color, modifier = tap.heightIn(min = 24.dp))
         }
     }
+}
+
+/** H71: '3 examples · Clear' while the Try 3 examples saves are there (they also go at the 5th real save). */
+@Composable
+private fun ExamplesLine(count: Int, onAction: (HomeAction) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            if (count == 1) "1 example" else "$count examples",
+            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(" · ", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            "Clear",
+            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.clip(PillShape).clickable(role = Role.Button, onClickLabel = "Clear the examples") {
+                onAction(HomeAction.OnClearExamples)
+            }.heightIn(min = 48.dp).padding(horizontal = 8.dp).wrapContentHeight(),
+        )
+    }
+}
+
+/** k-ob-ready / k-empty: 3 marked saves to look around with (H71). */
+@Composable
+private fun TryExamplesButton(onAction: (HomeAction) -> Unit) {
+    OutlinedButton(
+        onClick = { onAction(HomeAction.OnTryExamples) },
+        shape = ButtonShape,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+    ) { Text("Try 3 examples", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface) }
 }
 
 @Composable
@@ -246,7 +280,7 @@ internal fun HeroCard(save: Save, label: String = "JUST KEPT", onClick: (() -> U
     // DateUtils says '0 minutes ago' for the first minute.
     val ago = if (now - save.createdAt < DateUtils.MINUTE_IN_MILLIS) "just now"
     else DateUtils.getRelativeTimeSpanString(save.createdAt, now, DateUtils.MINUTE_IN_MILLIS).toString()
-    val source = when (save.source) {
+    val source = if (save.example) "EXAMPLE" else when (save.source) {
         SaveSource.PICKER, SaveSource.SHARE_IMAGE -> if (save.imagePath != null) "YOUR SCREENSHOT" else null
         else -> null
     }
@@ -285,7 +319,7 @@ internal fun HeroCard(save: Save, label: String = "JUST KEPT", onClick: (() -> U
                 if (save.status == SaveStatus.READ) {
                     TagPill(save.type.label, icon = typeIcon(save.type), onDark = true)
                     save.tags.firstOrNull()?.let { TagPill(it, onDark = true) }
-                    RouteBadge(save.readBy)
+                    RouteBadge(save.readBy, save.example)
                 }
             }
         }
@@ -459,15 +493,16 @@ private fun EmptyHome(onAction: (HomeAction) -> Unit) {
             Spacer(Modifier.size(10.dp))
             Text("Pick screenshots", style = MaterialTheme.typography.labelLarge)
         }
+        TryExamplesButton(onAction)
         Text(
-            "No gallery permission: you pick, Kept only sees those.",
+            "No gallery permission: you pick, Kept only sees those. Examples are marked and clear in one tap.",
             style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth(),
         )
     }
 }
 
-/** k-ob-ready (H70): Home before the first save, in the person's order. 'Try 3 examples' comes in the next chunk. */
+/** k-ob-ready (H70): Home before the first save, in the person's order; Try 3 examples under Pick (H71). */
 @Composable
 private fun ReadyHome(ready: HomeReady, onAction: (HomeAction) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -502,6 +537,7 @@ private fun ReadyHome(ready: HomeReady, onAction: (HomeAction) -> Unit) {
             Spacer(Modifier.size(10.dp))
             Text("Pick screenshots", style = MaterialTheme.typography.labelLarge)
         }
+        TryExamplesButton(onAction)
         SectionLabel("Kept will tag them")
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(ready.types, key = { it.wire }) { type -> TagPill(type.label, icon = typeIcon(type)) }

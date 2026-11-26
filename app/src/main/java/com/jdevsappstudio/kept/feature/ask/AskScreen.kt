@@ -73,6 +73,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.jdevsappstudio.kept.core.designsystem.ExampleBadge
 import com.jdevsappstudio.kept.core.designsystem.ButtonShape
 import com.jdevsappstudio.kept.core.designsystem.CardShape
 import com.jdevsappstudio.kept.core.designsystem.Kept
@@ -302,6 +303,7 @@ private fun RefRow(ref: AskRef, onClick: () -> Unit) {
         SaveThumb(ref.thumbPath, ref.type, Modifier.size(44.dp))
         Column(Modifier.padding(start = 12.dp)) {
             Text(ref.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (ref.example) ExampleBadge(Modifier.padding(vertical = 2.dp))
             if (ref.line.isNotBlank()) {
                 Text(ref.line, style = MaterialTheme.typography.labelMedium, color = Kept.colors.text3, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }

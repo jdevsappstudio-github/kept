@@ -33,6 +33,8 @@ data class AskRef(
     val thumbPath: String? = null,
     /** The row's second line under the answer ('Assagao · banana pancakes'). */
     val line: String = "",
+    /** H71: a Try 3 examples save (Example badge on the row). */
+    val example: Boolean = false,
 ) {
     companion object {
         /** First summary line, else the place; blank when neither (the row shows the title alone). */

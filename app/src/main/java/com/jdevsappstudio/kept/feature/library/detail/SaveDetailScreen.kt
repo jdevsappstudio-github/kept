@@ -153,7 +153,7 @@ fun SaveDetailRoot(
     ) { action ->
         when (action) {
             SaveDetailAction.OnBackClick -> onBack()
-            SaveDetailAction.OnEditClick -> state.save?.let { onEdit(it.id) }
+            SaveDetailAction.OnEditClick -> state.save?.takeIf { !it.example }?.let { onEdit(it.id) }
             else -> viewModel.onAction(action)
         }
     }
@@ -223,7 +223,7 @@ fun SaveDetailScreen(
                     ItemRow(save, item, onRun, onAction)
                 }
             }
-            DetailRules.addItemLabel(save.type)?.let { label ->
+            DetailRules.addItemLabel(save.type)?.takeIf { !save.example }?.let { label ->
                 item(key = "addItem") {
                     Row(
                         Modifier.fillMaxWidth().padding(top = 10.dp),
@@ -281,7 +281,8 @@ private fun DetailBar(
             KeptIconButton(Icons.Outlined.Share, "Share", onClick = onShare)
             Box(Modifier.size(10.dp))
         }
-        if (save != null) {
+        // H71: an example has no Edit / Read again / Delete; Home's '3 examples · Clear' removes them.
+        if (save != null && !save.example) {
             Box {
                 KeptIconButton(Icons.Outlined.MoreVert, "More options", onClick = { menu = true })
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
@@ -307,7 +308,7 @@ private fun Header(save: Save, today: LocalDate, zone: ZoneId, onOpenLink: (Stri
                 path = picture,
                 caption = if (link != null && save.source != com.jdevsappstudio.kept.core.model.SaveSource.PICKER &&
                     save.source != com.jdevsappstudio.kept.core.model.SaveSource.SHARE_IMAGE
-                ) "${DetailRules.openOriginalLabel(save)} ↗" else "Your screenshot",
+                ) "${DetailRules.openOriginalLabel(save)} ↗" else if (save.example) "Example screenshot" else "Your screenshot",
                 onClick = link?.let { { onOpenLink(it) } },
             )
             VSpace(14.dp)
@@ -315,7 +316,7 @@ private fun Header(save: Save, today: LocalDate, zone: ZoneId, onOpenLink: (Stri
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             TagPill(save.type.label, icon = typeIcon(save.type))
             save.tags.forEach { TagPill(it) }
-            Text(
+            if (!save.example) Text(
                 "+ tag",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -325,7 +326,7 @@ private fun Header(save: Save, today: LocalDate, zone: ZoneId, onOpenLink: (Stri
                     .padding(horizontal = 8.dp, vertical = 3.dp),
             )
         }
-        RouteBadge(save.readBy, Modifier.padding(top = 8.dp))
+        RouteBadge(save.readBy, save.example, Modifier.padding(top = 8.dp))
         Text(
             save.displayTitle(),
             style = MaterialTheme.typography.displaySmall.copy(fontSize = 28.sp, lineHeight = 33.sp),
@@ -434,7 +435,8 @@ private fun ItemRow(save: Save, item: SaveItem, onRun: (ItemAction, Save) -> Uni
     val action = if (recipe) null else itemAction(save.type, item.name, null)
     Row(
         Modifier.fillMaxWidth()
-            .then(if (recipe) Modifier else Modifier.clickable(role = Role.Button, onClickLabel = "Fix") { onAction(SaveDetailAction.OnItemClick(item)) })
+            // H71: an example is never edited, so its items don't open Fix.
+            .then(if (recipe || save.example) Modifier else Modifier.clickable(role = Role.Button, onClickLabel = "Fix") { onAction(SaveDetailAction.OnItemClick(item)) })
             .heightIn(min = if (recipe) 56.dp else 64.dp)
             .padding(start = 14.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -552,7 +554,7 @@ private fun LinkBody(save: Save, link: LinkFill, onAction: (SaveDetailAction) ->
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 6.dp)) {
                     TagPill(save.type.label, icon = typeIcon(save.type))
-                    RouteBadge(save.readBy)
+                    RouteBadge(save.readBy, save.example)
                 }
             }
         }

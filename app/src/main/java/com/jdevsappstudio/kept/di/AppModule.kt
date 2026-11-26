@@ -6,6 +6,8 @@ import com.jdevsappstudio.kept.data.ai.FirebaseCardReader
 import com.jdevsappstudio.kept.data.ai.ReadModelConfig
 import com.jdevsappstudio.kept.data.ai.RemoteReadModelConfig
 import com.jdevsappstudio.kept.data.db.KeptDatabase
+import com.jdevsappstudio.kept.data.examples.ExampleSaves
+import com.jdevsappstudio.kept.data.examples.RoomExampleSaves
 import com.jdevsappstudio.kept.data.files.ImageLoader
 import com.jdevsappstudio.kept.data.files.SaveFiles
 import com.jdevsappstudio.kept.data.queue.NetworkStatus
@@ -122,6 +124,7 @@ val appModule = module {
     single<CollectionsLocalDataSource> { RoomCollectionsDataSource(get(), get<KeptDatabase>().collectionDao()) }
     single<SearchLocalDataSource> { RoomSearchDataSource(get<KeptDatabase>().searchDao()) }
     single { SaveFiles(androidContext(), get(IMAGE_DISPATCHER)) }
+    single<ExampleSaves> { RoomExampleSaves(androidContext(), get(), get(), get(IMAGE_DISPATCHER)) }
     single<SettingsStore> { DataStoreSettingsStore(androidContext()) }
     single { NetworkStatus(androidContext()) }
     single { ReadRouting(get(), get(), get()) }
@@ -148,6 +151,7 @@ val appModule = module {
             preferredTypes = settings.preferredTypes,
             ready = homeReady(settings, get<CardReader>()::deviceModelState, get()),
             reads = get<CloudQuota>().observe(CloudMeter.READS),
+            examples = get(),
         )
     }
     // Onboarding (H70).

@@ -10,6 +10,7 @@ import com.jdevsappstudio.kept.data.ai.ReadFailure
 import com.jdevsappstudio.kept.data.db.CardRow
 import com.jdevsappstudio.kept.data.db.SaveDao
 import com.jdevsappstudio.kept.data.db.SaveEntity
+import com.jdevsappstudio.kept.data.examples.ExampleContent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -34,7 +35,13 @@ class RoomSaveDataSource(
                     sharedText = s.sharedText, url = s.url, imagePath = s.imagePath, contentHash = s.contentHash,
                 )
             },
-        )
+        ).also { pruneExamples() }
+    }
+
+    /** H71: the examples go for good (files too) once the library has [ExampleContent.GONE_AT_REAL_SAVES] real saves. */
+    private suspend fun pruneExamples() {
+        val examples = dao.exampleIds()
+        if (examples.isNotEmpty() && dao.realCount() >= ExampleContent.GONE_AT_REAL_SAVES) examples.forEach { delete(it) }
     }
 
     override suspend fun findDuplicate(contentHash: String?, url: String?): Long? =

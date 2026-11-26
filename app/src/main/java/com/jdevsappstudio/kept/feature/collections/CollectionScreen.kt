@@ -256,7 +256,7 @@ private fun SaveCard(save: Save, grid: Boolean, collectionName: String, onAction
                 SaveThumb(save.thumbPath ?: save.imagePath, save.type, Modifier.fillMaxWidth().aspectRatio(1f), corner = 0.dp)
                 Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Title(save)
-                    RouteBadge(save.readBy)
+                    RouteBadge(save.readBy, save.example)
                 }
             }
         } else {
@@ -274,7 +274,7 @@ private fun SaveCard(save: Save, grid: Boolean, collectionName: String, onAction
                     // A collection mixes types, so each row says its own (the doc draws Place / Event / Recipe pills).
                     FlowRow(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         TagPill(save.type.label, icon = typeIcon(save.type))
-                        RouteBadge(save.readBy)
+                        RouteBadge(save.readBy, save.example)
                     }
                 }
             }

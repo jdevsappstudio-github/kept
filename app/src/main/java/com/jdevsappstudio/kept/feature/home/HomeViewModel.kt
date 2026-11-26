@@ -13,6 +13,7 @@ import com.jdevsappstudio.kept.core.model.Shelf
 import com.jdevsappstudio.kept.core.model.TypeChip
 import com.jdevsappstudio.kept.core.model.CollectionSuggestion
 import com.jdevsappstudio.kept.core.model.SaveCollection
+import com.jdevsappstudio.kept.data.examples.ExampleSaves
 import com.jdevsappstudio.kept.data.library.CollectionSuggestions
 import com.jdevsappstudio.kept.data.library.CollectionsLocalDataSource
 import com.jdevsappstudio.kept.data.library.LibraryLocalDataSource
@@ -64,6 +65,8 @@ data class HomeState(
     val loaded: Boolean = false,
     /** k-ob-ready instead of k-empty: set until the first save has shown (H70). */
     val ready: HomeReady? = null,
+    /** H71: live 'Try 3 examples' saves; Home shows '3 examples · Clear' while there are any. */
+    val examples: List<Long> = emptyList(),
 ) {
     /** Header "84 saves" = the sum of the chips (k-home note). */
     val total: Int get() = chips.sumOf { it.count }
@@ -95,6 +98,10 @@ sealed interface HomeAction {
     data object OnNeedLookClick : HomeAction
     /** k-empty Pick screenshots: opens the photo picker straight away. */
     data object OnPickClick : HomeAction
+    /** k-ob-ready / k-empty 'Try 3 examples' (H71). */
+    data object OnTryExamples : HomeAction
+    /** '3 examples · Clear': soft delete, snackbar Undo. */
+    data object OnClearExamples : HomeAction
     /** k-ob-ready's phone-AI line → k-model or k-unsupported. */
     data class OnPhoneLineClick(val target: PhoneLine.Target) : HomeAction
     /** Debug panel only: checks delete + the app-wide Undo snackbar on a real library. */
@@ -121,6 +128,7 @@ class HomeViewModel(
     ready: Flow<HomeReady?> = flowOf(null),
     /** Today's cloud reads meter ('3 of 100 cloud reads left today'); null = never shown. */
     reads: Flow<MeterView?> = flowOf(null),
+    private val examples: ExampleSaves = ExampleSaves.NONE,
     clock: () -> Long = System::currentTimeMillis,
 ) : ViewModel() {
 
@@ -148,17 +156,18 @@ class HomeViewModel(
     }
 
     val state: StateFlow<HomeState> = combine(
-        combine(status, ready) { s, r -> s to r },
+        combine(status, ready, examples.observeIds()) { s, r, e -> Triple(s, r, e) },
         preferredTypes.flatMapLatest { library.observeTypeChips(it) },
         library.observeNewest(),
         organised,
         library.observeCountSince(weekAgo),
-    ) { (st, rdy), chips, hero, o, week ->
+    ) { (st, rdy, ex), chips, hero, o, week ->
         HomeState(
             counts = st.q.counts, route = st.q.route, pause = st.q.pause, cloudHelp = st.cloudHelp,
             chips = chips, hero = hero, shelves = ShelfOrder.onHome(o.shelves), allShelves = o.shelves.size,
             collections = o.collections, suggestion = o.suggestion,
             newThisWeek = week, readsWith = st.readsWith, lines = st.lines, loaded = true, ready = rdy,
+            examples = ex,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeState())
 
@@ -186,6 +195,17 @@ class HomeViewModel(
                     snackbars.show(
                         UiText.Plural(R.plurals.snack_deleted, 1, 1),
                         SnackbarAction(UiText.Res(R.string.snack_undo)) { library.undoDelete(listOf(id)) },
+                    )
+                }
+            }
+            HomeAction.OnTryExamples -> viewModelScope.launch { examples.add() }
+            HomeAction.OnClearExamples -> {
+                val ids = state.value.examples.takeIf { it.isNotEmpty() } ?: return
+                viewModelScope.launch {
+                    library.delete(ids)
+                    snackbars.show(
+                        UiText.Res(R.string.snack_examples_cleared),
+                        SnackbarAction(UiText.Res(R.string.snack_undo)) { library.undoDelete(ids) },
                     )
                 }
             }

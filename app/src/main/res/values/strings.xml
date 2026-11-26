@@ -60,6 +60,7 @@
         <item quantity="other">Deleted %1$d</item>
     </plurals>
     <string name="snack_saved">Saved</string>
+    <string name="snack_examples_cleared">Examples cleared</string>
     <string name="snack_hidden">Hidden from home</string>
     <string name="snack_merged">Merged into %1$s</string>
     <string name="snack_off_shelf">Off the %1$s shelf</string>

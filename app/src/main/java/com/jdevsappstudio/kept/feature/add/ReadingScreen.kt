@@ -200,7 +200,7 @@ private fun ReadCard(save: Save, onAction: (ReadingAction) -> Unit) {
         )
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             TagPill(save.type.label, icon = typeIcon(save.type))
-            RouteBadge(save.readBy)
+            RouteBadge(save.readBy, save.example)
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(ReadingRules.editPrompt(save.type) + " ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

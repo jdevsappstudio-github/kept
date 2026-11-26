@@ -274,5 +274,5 @@ internal fun SaveWithDetails.toSave(): Save = Save(
     summary = save.summary, type = SaveType.fromWire(save.type), kind = save.kind, place = save.place,
     eventDate = save.eventDate, link = save.link, tags = tags.sorted(),
     items = items.sortedBy { it.id }.map { it.name }, readAt = save.readAt,
-    filledAt = save.filledAt,
+    filledAt = save.filledAt, example = save.example,
 )

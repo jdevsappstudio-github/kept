@@ -16,7 +16,7 @@ fun Save.displayTitle(): String = when (status) {
 /** UI2: k-list card line under the title: the card summary, else where it came from. */
 fun Save.metaLine(): String = summary.lineSequence().firstOrNull { it.isNotBlank() }?.trim() ?: sourcePhrase()
 
-fun Save.sourcePhrase(): String = when (source) {
+fun Save.sourcePhrase(): String = if (example) "as an example" else when (source) {
     SaveSource.SHARE_IMAGE, SaveSource.PICKER -> "from a screenshot"
     SaveSource.SHARE_TEXT, SaveSource.PASTE -> appName(sourceApp)?.let { "from $it" } ?: "from a link"
 }

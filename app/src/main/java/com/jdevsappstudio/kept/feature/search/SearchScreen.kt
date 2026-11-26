@@ -68,6 +68,7 @@ import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import com.jdevsappstudio.kept.core.designsystem.ExampleBadge
 import com.jdevsappstudio.kept.core.designsystem.CardShape
 import com.jdevsappstudio.kept.core.designsystem.KeptChip
 import com.jdevsappstudio.kept.core.designsystem.KeptMark
@@ -324,6 +325,7 @@ private fun HitRow(hit: SearchHit, pick: PickState?, onAction: (SearchAction) ->
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(save.displayTitle(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (save.example) ExampleBadge()
             val line = if (hit.snippet.isNotBlank()) snippetText(hit.snippet) else androidx.compose.ui.text.AnnotatedString(save.metaLine())
             Text(line, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
             if (locked) {

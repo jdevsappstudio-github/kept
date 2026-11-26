@@ -254,7 +254,7 @@ private fun RowCard(save: Save, picked: Boolean, selecting: Boolean, onAction: (
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(save.displayTitle(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(save.metaLine(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            RouteBadge(save.readBy, Modifier.padding(top = 2.dp))
+            RouteBadge(save.readBy, save.example, Modifier.padding(top = 2.dp))
         }
     }
 }
@@ -273,7 +273,7 @@ private fun GridCard(save: Save, picked: Boolean, selecting: Boolean, onAction: 
         }
         Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(save.displayTitle(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            RouteBadge(save.readBy)
+            RouteBadge(save.readBy, save.example)
         }
     }
 }

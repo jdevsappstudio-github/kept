@@ -26,6 +26,7 @@ import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.School
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.ShoppingBag
 import androidx.compose.material.icons.outlined.TipsAndUpdates
@@ -139,6 +140,25 @@ fun RouteBadge(readBy: ReadBy?, modifier: Modifier = Modifier) {
     ) {
         Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(12.dp))
         Text(label, style = MaterialTheme.typography.labelMedium, color = fg, maxLines = 1)
+    }
+}
+
+/** H71: an example save wears 'Example' where a real one shows who read it. */
+@Composable
+fun RouteBadge(readBy: ReadBy?, example: Boolean, modifier: Modifier = Modifier) {
+    if (example) ExampleBadge(modifier) else RouteBadge(readBy, modifier)
+}
+
+/** H71 'Example' pill: opaque, so it reads on the dark hero gradient too. */
+@Composable
+fun ExampleBadge(modifier: Modifier = Modifier) {
+    Row(
+        modifier.clip(PillShape).background(MaterialTheme.colorScheme.secondaryContainer).padding(horizontal = 8.dp, vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(Icons.Outlined.School, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(12.dp))
+        Text("Example", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSecondaryContainer, maxLines = 1)
     }
 }
 

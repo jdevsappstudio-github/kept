@@ -51,6 +51,8 @@ data class SaveEntity(
     val deletedAt: Long? = null,
     /** v5 (H59): when Fill in with cloud last wrote this card from the linked page. Any later read clears it. */
     val filledAt: Long? = null,
+    /** v6 (H71): one of the 3 'Try 3 examples' saves. Marked, never edited; cleared in one tap or at the 5th real save. */
+    @ColumnInfo(defaultValue = "0") val example: Boolean = false,
 )
 
 @Entity(
