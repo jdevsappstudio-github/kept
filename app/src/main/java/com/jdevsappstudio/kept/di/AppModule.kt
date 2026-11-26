@@ -40,6 +40,12 @@ import kotlinx.coroutines.SupervisorJob
 import org.koin.android.ext.koin.androidContext
 import java.io.File
 import org.koin.core.module.dsl.viewModel
+import com.jdevsappstudio.kept.data.ai.DeviceModelDownloads
+import com.jdevsappstudio.kept.feature.home.homeReady
+import com.jdevsappstudio.kept.feature.onboarding.ModelViewModel
+import com.jdevsappstudio.kept.feature.onboarding.OnboardingGate
+import com.jdevsappstudio.kept.feature.onboarding.OnboardingViewModel
+import kotlinx.coroutines.flow.first
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import com.jdevsappstudio.kept.data.library.LibraryLocalDataSource
@@ -136,11 +142,24 @@ val appModule = module {
     viewModel { AddViewModel(get(), get(), get(), get()) }
     viewModel {
         val queue = get<ReadQueue>()
+        val settings = get<SettingsStore>()
         HomeViewModel(
-            combine(get<SaveLocalDataSource>().observeCounts(), queue.route, queue.pause, ::QueueView), get(), get(), get(), get(),
+            combine(get<SaveLocalDataSource>().observeCounts(), queue.route, queue.pause, ::QueueView), settings, get(), get(), get(),
+            preferredTypes = settings.preferredTypes,
+            ready = homeReady(settings, get<CardReader>()::deviceModelState, get()),
             reads = get<CloudQuota>().observe(CloudMeter.READS),
         )
     }
+    // Onboarding (H70).
+    single { DeviceModelDownloads(get(), get(APP_SCOPE)) }
+    single {
+        val saves = get<SaveLocalDataSource>()
+        OnboardingGate(get()) { saves.observeCounts().first().let { it.pending + it.needsLook + it.read } > 0 }
+    }
+    viewModel {
+        OnboardingViewModel(get(), get(), get(), get(), get<CardReader>()::deviceModelState, get<ReadQueue>().pause)
+    }
+    viewModel { ModelViewModel(get(), get<CardReader>()::deviceModelState) }
     viewModel {
         val queue = get<ReadQueue>()
         ReadingViewModel(

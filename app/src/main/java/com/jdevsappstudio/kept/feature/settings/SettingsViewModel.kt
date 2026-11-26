@@ -33,6 +33,8 @@ sealed interface SettingsAction {
     data class OnThemeModeClick(val mode: ThemeMode) : SettingsAction
     /** Sent only once Android allows notifications (the Root asks first). */
     data class OnReadingUpdatesChange(val on: Boolean) : SettingsAction
+    /** Debug builds only (H70): clears the done flag, so MainActivity shows onboarding again. */
+    data object OnReplayOnboarding : SettingsAction
 }
 
 /** k-settings hub + k-appearance (H68). */
@@ -54,6 +56,7 @@ class SettingsViewModel(
         when (action) {
             is SettingsAction.OnThemeModeClick -> viewModelScope.launch { settings.setThemeMode(action.mode) }
             is SettingsAction.OnReadingUpdatesChange -> viewModelScope.launch { settings.setReadingUpdates(action.on) }
+            SettingsAction.OnReplayOnboarding -> viewModelScope.launch { settings.setOnboardingDone(false) }
             else -> Unit
         }
     }

@@ -6,6 +6,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.jdevsappstudio.kept.core.model.ListLayout
+import com.jdevsappstudio.kept.core.model.SaveType
+import com.jdevsappstudio.kept.core.model.ShareApp
 import com.jdevsappstudio.kept.core.model.ThemeMode
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -47,6 +49,24 @@ interface SettingsStore {
 
     /** Delete everything (H69): forgets recent searches and dismissed suggestions; real settings stay. */
     suspend fun clearContent()
+
+    /** H70: onboarding finished (or skipped, or an existing library was found). */
+    val onboardingDone: Flow<Boolean>
+    suspend fun setOnboardingDone(done: Boolean)
+    /** False until the done flag is first written (either way): the gate's silent check runs only on that first open. */
+    suspend fun onboardingFlagWritten(): Boolean
+
+    /** B1 picks, at most 3, in pick order: they come first in Home's type chips. */
+    val preferredTypes: Flow<List<SaveType>>
+    suspend fun setPreferredTypes(types: List<SaveType>)
+
+    /** B2 picks, in list order: the share tip and k-ob-first's app button follow the first one. */
+    val shareApps: Flow<List<ShareApp>>
+    suspend fun setShareApps(apps: List<ShareApp>)
+
+    /** False until the first save shows on Home: an empty Home is k-ob-ready before it, k-empty after (H70). */
+    val firstSaveSeen: Flow<Boolean>
+    suspend fun markFirstSaveSeen()
 
     companion object {
         const val RECENT_SEARCHES = 5
@@ -130,7 +150,42 @@ class DataStoreSettingsStore(private val context: Context) : SettingsStore {
         }
     }
 
+    override val onboardingDone: Flow<Boolean> = context.settings.data.map { it[ONBOARDING_DONE] ?: false }.distinctUntilChanged()
+
+    override suspend fun setOnboardingDone(done: Boolean) {
+        context.settings.edit { it[ONBOARDING_DONE] = done }
+    }
+
+    override suspend fun onboardingFlagWritten(): Boolean = context.settings.data.first().contains(ONBOARDING_DONE)
+
+    override val preferredTypes: Flow<List<SaveType>> = context.settings.data
+        .map { p -> p[PREFERRED_TYPES].orEmpty().split(LIST_SEP).mapNotNull { w -> SaveType.entries.firstOrNull { it.wire == w } } }
+        .distinctUntilChanged()
+
+    override suspend fun setPreferredTypes(types: List<SaveType>) {
+        context.settings.edit { it[PREFERRED_TYPES] = types.joinToString(LIST_SEP) { t -> t.wire } }
+    }
+
+    override val shareApps: Flow<List<ShareApp>> = context.settings.data
+        .map { p -> p[SHARE_APPS].orEmpty().split(LIST_SEP).mapNotNull { n -> ShareApp.entries.firstOrNull { it.name == n } } }
+        .distinctUntilChanged()
+
+    override suspend fun setShareApps(apps: List<ShareApp>) {
+        context.settings.edit { it[SHARE_APPS] = apps.joinToString(LIST_SEP) { a -> a.name } }
+    }
+
+    override val firstSaveSeen: Flow<Boolean> = context.settings.data.map { it[FIRST_SAVE_SEEN] ?: false }.distinctUntilChanged()
+
+    override suspend fun markFirstSaveSeen() {
+        context.settings.edit { it[FIRST_SAVE_SEEN] = true }
+    }
+
     private companion object {
+        val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
+        val PREFERRED_TYPES = stringPreferencesKey("preferred_types")
+        val SHARE_APPS = stringPreferencesKey("share_apps")
+        val FIRST_SAVE_SEEN = booleanPreferencesKey("first_save_seen")
+        const val LIST_SEP = ","
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val READING_UPDATES = booleanPreferencesKey("reading_updates")
         val DISMISSED = stringSetPreferencesKey("dismissed_suggestions")

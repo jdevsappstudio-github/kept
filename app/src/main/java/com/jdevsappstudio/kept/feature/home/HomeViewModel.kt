@@ -30,6 +30,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import com.jdevsappstudio.kept.feature.onboarding.PhoneLine
 import kotlinx.coroutines.flow.scan
 import com.jdevsappstudio.kept.data.quota.MeterView
 import kotlinx.coroutines.flow.stateIn
@@ -60,6 +62,8 @@ data class HomeState(
     val lines: List<HomeLine> = emptyList(),
     /** False until the first emission from Room, so the empty state doesn't flash on open. */
     val loaded: Boolean = false,
+    /** k-ob-ready instead of k-empty: set until the first save has shown (H70). */
+    val ready: HomeReady? = null,
 ) {
     /** Header "84 saves" = the sum of the chips (k-home note). */
     val total: Int get() = chips.sumOf { it.count }
@@ -91,6 +95,8 @@ sealed interface HomeAction {
     data object OnNeedLookClick : HomeAction
     /** k-empty Pick screenshots: opens the photo picker straight away. */
     data object OnPickClick : HomeAction
+    /** k-ob-ready's phone-AI line → k-model or k-unsupported. */
+    data class OnPhoneLineClick(val target: PhoneLine.Target) : HomeAction
     /** Debug panel only: checks delete + the app-wide Undo snackbar on a real library. */
     data object DebugDeleteHero : HomeAction
 }
@@ -109,8 +115,10 @@ class HomeViewModel(
     private val library: LibraryLocalDataSource,
     private val collections: CollectionsLocalDataSource,
     private val snackbars: Snackbars,
-    /** Onboarding B1 picks; wired when onboarding lands. */
+    /** Onboarding B1 picks (settings in the app). */
     preferredTypes: Flow<List<SaveType>> = flowOf(emptyList()),
+    /** k-ob-ready's content while no save has shown yet ([homeReady] in the app). */
+    ready: Flow<HomeReady?> = flowOf(null),
     /** Today's cloud reads meter ('3 of 100 cloud reads left today'); null = never shown. */
     reads: Flow<MeterView?> = flowOf(null),
     clock: () -> Long = System::currentTimeMillis,
@@ -140,17 +148,17 @@ class HomeViewModel(
     }
 
     val state: StateFlow<HomeState> = combine(
-        status,
+        combine(status, ready) { s, r -> s to r },
         preferredTypes.flatMapLatest { library.observeTypeChips(it) },
         library.observeNewest(),
         organised,
         library.observeCountSince(weekAgo),
-    ) { st, chips, hero, o, week ->
+    ) { (st, rdy), chips, hero, o, week ->
         HomeState(
             counts = st.q.counts, route = st.q.route, pause = st.q.pause, cloudHelp = st.cloudHelp,
             chips = chips, hero = hero, shelves = ShelfOrder.onHome(o.shelves), allShelves = o.shelves.size,
             collections = o.collections, suggestion = o.suggestion,
-            newThisWeek = week, readsWith = st.readsWith, lines = st.lines, loaded = true,
+            newThisWeek = week, readsWith = st.readsWith, lines = st.lines, loaded = true, ready = rdy,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeState())
 
@@ -161,6 +169,11 @@ class HomeViewModel(
     init {
         // Home open: saves deleted over a minute ago go for good (start-up does the same).
         viewModelScope.launch { library.purgeStale() }
+        // H70: once a save has shown, an empty Home is k-empty (after Delete everything), not k-ob-ready.
+        viewModelScope.launch {
+            library.observeNewest().filterNotNull().first()
+            if (!settings.firstSaveSeen.first()) settings.markFirstSaveSeen()
+        }
     }
 
     fun onAction(action: HomeAction) {

@@ -13,6 +13,8 @@ import com.jdevsappstudio.kept.data.queue.ReadQueue
 import com.jdevsappstudio.kept.di.APP_SCOPE
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
+import com.jdevsappstudio.kept.data.ai.DeviceModelDownloads
 import org.koin.core.context.startKoin
 import com.jdevsappstudio.kept.data.library.LibraryLocalDataSource
 import com.jdevsappstudio.kept.data.queue.ReadNotifications
@@ -39,6 +41,8 @@ class KeptApplication : Application(), Configuration.Provider {
         koin.get<CoroutineScope>(APP_SCOPE).launch {
             if (BuildConfig.HAS_FIREBASE) AppCheckSetup.install()
             koin.get<ReadQueue>().start()
+            // H70: a phone whose AI wasn't fetched yet (onboarding left early, a failed try) asks again, after onboarding only.
+            if (koin.get<SettingsStore>().onboardingDone.first()) koin.get<DeviceModelDownloads>().startIfNeeded()
             // Deletes whose Undo window has long passed (snackbar can't outlive the process).
             koin.get<LibraryLocalDataSource>().purgeStale()
         }

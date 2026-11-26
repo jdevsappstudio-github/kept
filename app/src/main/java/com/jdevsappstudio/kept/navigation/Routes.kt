@@ -42,3 +42,15 @@ import kotlinx.serialization.Serializable
 @Serializable data class CloudOutRoute(val meter: String = "ANSWERS")
 /** k-sent, opened at one request from an answer's Cloud chip (null = the whole log, from Privacy). */
 @Serializable data class SentRoute(val sentId: Long? = null)
+/** k-model / k-model-failed (H70). */
+@Serializable data object ModelRoute
+
+// Onboarding (H70): its own NavHost, shown instead of the app until it's done.
+@Serializable data object PromiseRoute
+@Serializable data object ObTypesRoute
+@Serializable data object ObAppsRoute
+@Serializable data object ObFirstRoute
+@Serializable data object ObCardRoute
+
+/** A save to show on top of Home when the app opens: from the share sheet, or onboarding's first card ([edit] = Edit tags). */
+data class OpenRequest(val saveId: Long, val edit: Boolean = false)

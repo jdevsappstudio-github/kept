@@ -6,6 +6,7 @@ import com.jdevsappstudio.kept.feature.settings.LicencesScreen
 import com.jdevsappstudio.kept.feature.settings.PrivacyRoot
 import com.jdevsappstudio.kept.feature.settings.SettingsRoot
 import com.jdevsappstudio.kept.feature.settings.UnsupportedRoot
+import com.jdevsappstudio.kept.feature.onboarding.ModelRoot
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -71,13 +72,14 @@ import kotlin.reflect.KClass
  * [openSave]: a save id from the share sheet ('Open it'); consumed once.
  */
 @Composable
-fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostController = rememberNavController()) {
+fun KeptNavHost(openSave: OpenRequest?, onSaveOpened: () -> Unit, nav: NavHostController = rememberNavController()) {
     val entry by nav.currentBackStackEntryAsState()
     val destination = entry?.destination
 
     LaunchedEffect(openSave) {
         if (openSave != null) {
-            nav.navigate(SaveDetailRoute(openSave)) { launchSingleTop = true }
+            nav.navigate(SaveDetailRoute(openSave.saveId)) { launchSingleTop = true }
+            if (openSave.edit) nav.navigate(EditSaveRoute(longArrayOf(openSave.saveId)))
             onSaveOpened()
         }
     }
@@ -102,6 +104,8 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
                     onPick = { nav.navigate(AddRoute(pick = true)) },
                     onSettings = { nav.navigate(SettingsRoute) },
                     onNeedLook = { nav.navigate(NeedLookRoute) },
+                    onModel = { nav.navigate(ModelRoute) },
+                    onUnsupported = { nav.navigate(UnsupportedRoute) },
                 )
             }
             composable<SearchRoute> {
@@ -243,9 +247,16 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
                     onUnsupported = { nav.navigate(UnsupportedRoute) },
                     // H69: after Delete everything, the empty Home (its snackbar says so).
                     onDeleted = { nav.popBackStack(HomeRoute, inclusive = false) },
+                    onModel = { nav.navigate(ModelRoute) },
                 )
             }
             composable<UnsupportedRoute> { UnsupportedRoot(onBack = { nav.popBackStack() }) }
+            composable<ModelRoute> {
+                ModelRoot(
+                    onBack = { nav.popBackStack() },
+                    onReadWithCloud = { nav.navigate(UnsupportedRoute) { popUpTo<ModelRoute> { inclusive = true } } },
+                )
+            }
             composable<AboutRoute> { AboutScreen(onBack = { nav.popBackStack() }, onLicences = { nav.navigate(LicencesRoute) }) }
             composable<LicencesRoute> { LicencesScreen(onBack = { nav.popBackStack() }) }
             composable<NeedLookRoute> {

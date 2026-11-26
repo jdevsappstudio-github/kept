@@ -6,7 +6,11 @@ import android.graphics.Bitmap
 import android.os.SystemClock
 import android.util.Log
 import com.google.firebase.Firebase
+import com.google.firebase.ai.DownloadStatus
 import com.google.firebase.ai.GenerativeModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.map
 import com.google.firebase.ai.InferenceMode
 import com.google.firebase.ai.InferenceSource
 import com.google.firebase.ai.OnDeviceConfig
@@ -74,6 +78,20 @@ class FirebaseCardReader(
             throw e
         } catch (_: Exception) {
             DeviceModelState.UNAVAILABLE
+        }
+    }
+
+    override fun downloadDeviceModel(): Flow<ModelDownloadStep> {
+        if (!firebaseConfigured) return emptyFlow()
+        val extension = deviceModel.onDeviceExtension ?: return emptyFlow()
+        return extension.download().map { status ->
+            when (status) {
+                is DownloadStatus.DownloadStarted -> ModelDownloadStep.Started(status.bytesToDownload)
+                is DownloadStatus.DownloadInProgress -> ModelDownloadStep.Progress(status.totalBytesDownloaded)
+                is DownloadStatus.DownloadCompleted -> ModelDownloadStep.Done
+                is DownloadStatus.DownloadFailed -> ModelDownloadStep.Failed(status.exception.message)
+                else -> ModelDownloadStep.Progress(0)
+            }
         }
     }
 

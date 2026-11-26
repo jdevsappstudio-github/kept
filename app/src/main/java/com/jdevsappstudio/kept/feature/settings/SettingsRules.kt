@@ -5,8 +5,11 @@ import com.jdevsappstudio.kept.data.ai.DeviceModelState
 import com.jdevsappstudio.kept.data.quota.MeterView
 import com.jdevsappstudio.kept.feature.ask.ReportEmail
 
-/** The 'Reading your saves' row on k-privacy. [opensUnsupported]: tapping it opens k-unsupported (no Nano, H69). */
-data class ReadingRowCopy(val title: String, val body: String, val opensUnsupported: Boolean)
+/**
+ * The 'Reading your saves' row on k-privacy. [opensUnsupported]: tapping it opens k-unsupported (no Nano, H69);
+ * [opensModel]: k-model while the phone's AI is getting ready (H70).
+ */
+data class ReadingRowCopy(val title: String, val body: String, val opensUnsupported: Boolean, val opensModel: Boolean = false)
 
 /** Copy for k-settings, k-appearance, k-privacy, k-unsupported and About (H68, H69). Pure, so it is JVM-tested. */
 object SettingsCopy {
@@ -51,7 +54,7 @@ object SettingsCopy {
         null -> ReadingRowCopy("Checking this phone", "Looking for on-device AI.", opensUnsupported = false)
         DeviceModelState.AVAILABLE -> ReadingRowCopy("On this phone · ready", "Gemini Nano reads every save here.", false)
         DeviceModelState.DOWNLOADABLE, DeviceModelState.DOWNLOADING -> ReadingRowCopy(
-            "On this phone · getting ready", "Android is downloading the phone's AI. Saves wait in line.", false,
+            "On this phone · getting ready", "Android is downloading the phone's AI. Saves wait in line.", false, opensModel = true,
         )
         DeviceModelState.UNAVAILABLE -> if (cloudHelp) {
             ReadingRowCopy("In the cloud", "No AI on this phone, so Gemini in the cloud reads your saves, images too.", true)

@@ -59,16 +59,20 @@ fun PrivacyRoot(
     onSent: () -> Unit,
     onUnsupported: () -> Unit,
     onDeleted: () -> Unit,
+    onModel: (() -> Unit)? = null,
     viewModel: PrivacyViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     ObserveAsEvents(viewModel.events) { event -> if (event == PrivacyEvent.Deleted) onDeleted() }
-    PrivacyScreen(state) { action ->
+    PrivacyScreen(state, modelLinked = onModel != null) { action ->
         when (action) {
             PrivacyAction.OnBack -> onBack()
             PrivacyAction.OnSentClick -> onSent()
-            PrivacyAction.OnReadingRowClick -> if (state.readingRow.opensUnsupported) onUnsupported()
+            PrivacyAction.OnReadingRowClick -> when {
+                state.readingRow.opensUnsupported -> onUnsupported()
+                state.readingRow.opensModel -> onModel?.invoke()
+            }
             PrivacyAction.OnPrivacyPolicyClick -> context.openUrl(SettingsCopy.PRIVACY_URL)
             else -> viewModel.onAction(action)
         }
@@ -77,7 +81,7 @@ fun PrivacyRoot(
 
 /** k-privacy (H68, H69): every line is state-aware; no Ad privacy (no ads, H66), no Terms page yet. */
 @Composable
-fun PrivacyScreen(state: PrivacyState, onAction: (PrivacyAction) -> Unit) {
+fun PrivacyScreen(state: PrivacyState, modelLinked: Boolean = false, onAction: (PrivacyAction) -> Unit) {
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
         KeptTopBar("Privacy", onBack = { onAction(PrivacyAction.OnBack) })
         Column(
@@ -92,7 +96,7 @@ fun PrivacyScreen(state: PrivacyState, onAction: (PrivacyAction) -> Unit) {
                     if (onPhone) Icons.Outlined.PhoneAndroid else Icons.Outlined.Cloud, row.title, row.body,
                     iconTint = if (onPhone) Kept.colors.device else Kept.colors.cloud,
                     iconBg = if (onPhone) Kept.colors.deviceBg else Kept.colors.cloudBg,
-                    onClick = if (row.opensUnsupported) ({ onAction(PrivacyAction.OnReadingRowClick) }) else null,
+                    onClick = if (row.opensUnsupported || (row.opensModel && modelLinked)) ({ onAction(PrivacyAction.OnReadingRowClick) }) else null,
                 )
             }
             VSpace(8.dp)
@@ -151,10 +155,10 @@ fun PrivacyScreen(state: PrivacyState, onAction: (PrivacyAction) -> Unit) {
 }
 
 @Composable
-fun UnsupportedRoot(onBack: () -> Unit, viewModel: PrivacyViewModel = koinViewModel()) {
+fun UnsupportedRoot(onBack: () -> Unit, onDone: () -> Unit = onBack, viewModel: PrivacyViewModel = koinViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    ObserveAsEvents(viewModel.events) { event -> if (event == PrivacyEvent.Close) onBack() }
+    ObserveAsEvents(viewModel.events) { event -> if (event == PrivacyEvent.Close) onDone() }
     UnsupportedScreen(state) { action ->
         when (action) {
             PrivacyAction.OnBack -> onBack()

@@ -157,6 +157,15 @@ fun SettingsScreen(state: SettingsState, notificationsAllowed: Boolean, onAction
                 RowDivider()
                 NavRow(Icons.Outlined.Info, "About", SettingsCopy.aboutLine(BuildConfig.VERSION_NAME)) { onAction(SettingsAction.OnAboutClick) }
             }
+            if (BuildConfig.DEBUG) {
+                VSpace(8.dp)
+                SectionLabel("Debug")
+                RowGroup {
+                    NavRow(Icons.Outlined.Info, "Replay onboarding", "Shows the first run again; saves stay") {
+                        onAction(SettingsAction.OnReplayOnboarding)
+                    }
+                }
+            }
         }
     }
 }

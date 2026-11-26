@@ -242,6 +242,16 @@ class FakeSettings : SettingsStore {
         recentSearches.value = emptyList()
         dismissedSuggestions.value = emptySet()
     }
+    override val onboardingDone = MutableStateFlow(false)
+    var onboardingWritten = false
+    override suspend fun setOnboardingDone(done: Boolean) { onboardingDone.value = done; onboardingWritten = true }
+    override suspend fun onboardingFlagWritten() = onboardingWritten
+    override val preferredTypes = MutableStateFlow<List<com.jdevsappstudio.kept.core.model.SaveType>>(emptyList())
+    override suspend fun setPreferredTypes(types: List<com.jdevsappstudio.kept.core.model.SaveType>) { preferredTypes.value = types }
+    override val shareApps = MutableStateFlow<List<com.jdevsappstudio.kept.core.model.ShareApp>>(emptyList())
+    override suspend fun setShareApps(apps: List<com.jdevsappstudio.kept.core.model.ShareApp>) { shareApps.value = apps }
+    override val firstSaveSeen = MutableStateFlow(false)
+    override suspend fun markFirstSaveSeen() { firstSaveSeen.value = true }
 }
 
 /** Snackbars whose Undo runs at once. */

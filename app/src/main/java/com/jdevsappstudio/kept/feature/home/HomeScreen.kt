@@ -28,6 +28,12 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.PhoneAndroid
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.jdevsappstudio.kept.feature.onboarding.PhoneLine
+import com.jdevsappstudio.kept.feature.onboarding.icon
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -101,6 +107,8 @@ fun HomeRoot(
     onPick: () -> Unit,
     onSettings: () -> Unit,
     onNeedLook: () -> Unit,
+    onModel: () -> Unit = {},
+    onUnsupported: () -> Unit = {},
     viewModel: HomeViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -122,6 +130,10 @@ fun HomeRoot(
             HomeAction.OnPickClick -> onPick()
             HomeAction.OnSettingsClick -> onSettings()
             HomeAction.OnNeedLookClick -> onNeedLook()
+            is HomeAction.OnPhoneLineClick -> when (action.target) {
+                PhoneLine.Target.MODEL -> onModel()
+                PhoneLine.Target.UNSUPPORTED -> onUnsupported()
+            }
             else -> viewModel.onAction(action)
         }
     }
@@ -137,7 +149,7 @@ fun HomeScreen(state: HomeState, onAction: (HomeAction) -> Unit) {
         item(key = "bar") { HomeBar(showAdd = !state.isEmpty, onAction = onAction) }
         when {
             !state.loaded -> Unit
-            state.isEmpty -> item(key = "empty") { EmptyHome(onAction) }
+            state.isEmpty -> item(key = "empty") { state.ready?.let { ReadyHome(it, onAction) } ?: EmptyHome(onAction) }
             else -> {
                 item(key = "header") { Header(state) }
                 if (state.lines.isNotEmpty()) item(key = "lines") { StatusLines(state.lines, onAction) }
@@ -227,9 +239,13 @@ private fun TypeChips(chips: List<TypeChip>, total: Int, onAction: (HomeAction) 
     }
 }
 
+/** The big picture card: Home's 'Just kept', and onboarding's first card ([label] 'KEPT', no tap). */
 @Composable
-private fun HeroCard(save: Save, onClick: () -> Unit) {
-    val ago = DateUtils.getRelativeTimeSpanString(save.createdAt, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()
+internal fun HeroCard(save: Save, label: String = "JUST KEPT", onClick: (() -> Unit)? = null) {
+    val now = System.currentTimeMillis()
+    // DateUtils says '0 minutes ago' for the first minute.
+    val ago = if (now - save.createdAt < DateUtils.MINUTE_IN_MILLIS) "just now"
+    else DateUtils.getRelativeTimeSpanString(save.createdAt, now, DateUtils.MINUTE_IN_MILLIS).toString()
     val source = when (save.source) {
         SaveSource.PICKER, SaveSource.SHARE_IMAGE -> if (save.imagePath != null) "YOUR SCREENSHOT" else null
         else -> null
@@ -245,8 +261,8 @@ private fun HeroCard(save: Save, onClick: () -> Unit) {
             // A link or note has no picture: a shorter tinted card, not a big empty square.
             .then(if (picture != null) Modifier.aspectRatio(1.07f) else Modifier.height(190.dp))
             .card(MaterialTheme.colorScheme.surfaceVariant, 3.dp)
-            .clickable(role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = "Just kept: $title" },
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+            .semantics { contentDescription = "${label.lowercase().replaceFirstChar { it.uppercase() }}: $title" },
     ) {
         if (picture != null) {
             SaveThumb(picture, save.type, Modifier.fillMaxSize(), corner = 18.dp)
@@ -260,7 +276,7 @@ private fun HeroCard(save: Save, onClick: () -> Unit) {
         )
         Column(Modifier.align(Alignment.BottomStart).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
-                listOfNotNull("JUST KEPT", source ?: ago.uppercase()).joinToString(" · "),
+                listOfNotNull(label, source ?: ago.uppercase()).joinToString(" · "),
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.White.copy(alpha = 0.85f),
             )
@@ -448,6 +464,62 @@ private fun EmptyHome(onAction: (HomeAction) -> Unit) {
             style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth(),
         )
+    }
+}
+
+/** k-ob-ready (H70): Home before the first save, in the person's order. 'Try 3 examples' comes in the next chunk. */
+@Composable
+private fun ReadyHome(ready: HomeReady, onAction: (HomeAction) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            KeptMark(44.dp)
+            Column {
+                Text("You’re set.", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
+                Text("Now keep your first thing.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth().card(MaterialTheme.colorScheme.surface, 1.dp).padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(ready.tip.app?.icon() ?: Icons.Outlined.Share, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            }
+            Column(Modifier.weight(1f)) {
+                Text(ready.tip.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text(ready.tip.body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Button(
+            onClick = { onAction(HomeAction.OnPickClick) },
+            shape = ButtonShape,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+        ) {
+            Icon(Icons.Outlined.AddPhotoAlternate, contentDescription = null)
+            Spacer(Modifier.size(10.dp))
+            Text("Pick screenshots", style = MaterialTheme.typography.labelLarge)
+        }
+        SectionLabel("Kept will tag them")
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(ready.types, key = { it.wire }) { type -> TagPill(type.label, icon = typeIcon(type)) }
+        }
+        SectionLabel("Collections")
+        NewCollectionTile(Modifier.width(170.dp)) { onAction(HomeAction.OnNewCollectionClick) }
+        ready.phone?.let { line ->
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                    .then(if (line.target != null) Modifier.clickable(role = Role.Button) { onAction(HomeAction.OnPhoneLineClick(line.target)) } else Modifier)
+                    .padding(vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Icon(Icons.Outlined.PhoneAndroid, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                Text(line.text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+            }
+        }
     }
 }
 
