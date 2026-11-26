@@ -127,7 +127,7 @@ key *and* the previous classical key, which older Android versions still receive
 ### Gemini Nano
 
 On-device reading needs a phone where AICore offers Gemini Nano to third-party apps. Kept checks
-`onDeviceExtension.checkStatus()` at onboarding and offers the download (`DOWNLOADABLE` → progress → ready). Without
+`onDeviceExtension.checkStatus()` at onboarding and offers the download (`DOWNLOADABLE` → downloading → ready). Without
 Nano the app runs fully on the cloud path once you allow it.
 
 ## Privacy
@@ -138,10 +138,8 @@ turns on cloud help, and every cloud request is shown in the Sent log. See [PRIV
 
 ## Built during the hackathon
 
-Kept grows out of an earlier private prototype of a screenshot organizer by the same developer, which used ML Kit OCR
-and a local embedding model. That approach was dropped: this repository was started fresh on 25 Nov 2026, and the
-Firebase AI Logic hybrid reader, the design, the data layer and every screen here were built during the hackathon.
-AI coding assistants were used, as the rules allow.
+This repository was started on 25 Nov 2026. The Firebase AI Logic hybrid reader, the design, the data layer and
+every screen were built during the hackathon. AI coding assistants were used, as the rules allow.
 
 ## Licence
 
