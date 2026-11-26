@@ -23,7 +23,7 @@ val keystoreProperties = Properties().apply {
 val hasReleaseSigning = keystoreProperties.getProperty("storeFile") != null
 
 // versionCode = MAJOR*10000 + MINOR*100 + PATCH.
-val appVersionName = "0.1.0"
+val appVersionName = "0.1.1"
 val appVersionCode = appVersionName.split(".").map { it.toInt() }.let { (a, b, c) -> a * 10000 + b * 100 + c }
 
 android {
