@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,6 +45,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.jdevsappstudio.kept.feature.onboarding.ObStyle
+import com.jdevsappstudio.kept.feature.onboarding.boldPart
 import com.jdevsappstudio.kept.core.designsystem.ButtonShape
 import com.jdevsappstudio.kept.core.designsystem.Kept
 import com.jdevsappstudio.kept.core.designsystem.KeptTheme
@@ -176,38 +179,44 @@ fun UnsupportedRoot(onBack: () -> Unit, onDone: () -> Unit = onBack, viewModel: 
 @Composable
 fun UnsupportedScreen(state: PrivacyState, onAction: (PrivacyAction) -> Unit) {
     var details by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
+    // H73: same type scale as onboarding (it's step 0 there); the two choices sit at the bottom.
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 16.dp)) {
         KeptTopBar("", onBack = { onAction(PrivacyAction.OnBack) })
         Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(top = 8.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(top = 8.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Box(Modifier.size(56.dp).clip(RoundedCornerShape(16.dp)).background(Kept.colors.cloudBg), contentAlignment = Alignment.Center) {
                 Icon(Icons.Outlined.Cloud, contentDescription = null, tint = Kept.colors.cloud, modifier = Modifier.size(28.dp))
             }
-            Text(SettingsCopy.UNSUPPORTED_TITLE, style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.onBackground)
-            Text(SettingsCopy.unsupportedBody(state.reads), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(SettingsCopy.UNSUPPORTED_TITLE, style = ObStyle.promiseTitle, color = MaterialTheme.colorScheme.onBackground)
+            Text(
+                boldPart(SettingsCopy.unsupportedBody(state.reads), SettingsCopy.unsupportedBodyBold(state.reads)),
+                style = ObStyle.body, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             // H72: the full disclosure is one tap away, before Read with cloud.
             TextButton(onClick = { details = true }, contentPadding = PaddingValues(0.dp)) {
-                Icon(Icons.Outlined.Info, contentDescription = null, modifier = Modifier.size(18.dp))
-                Text("What’s sent?", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 6.dp))
+                Icon(Icons.Outlined.Info, contentDescription = null, modifier = Modifier.size(20.dp))
+                Text("What’s sent?", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 6.dp))
             }
+        }
+        Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Button(
                 onClick = { onAction(PrivacyAction.OnReadWithCloud) }, shape = ButtonShape,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = ObStyle.buttonHeight),
             ) {
-                Icon(Icons.Outlined.Cloud, contentDescription = null, modifier = Modifier.size(20.dp))
-                Text("Read with cloud", modifier = Modifier.padding(start = 8.dp))
+                Icon(Icons.Outlined.Cloud, contentDescription = null, modifier = Modifier.size(22.dp))
+                Text("Read with cloud", style = ObStyle.button, modifier = Modifier.padding(start = 8.dp))
             }
             OutlinedButton(
                 onClick = { onAction(PrivacyAction.OnTagByHand) }, shape = ButtonShape,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = ObStyle.buttonHeight),
             ) {
-                Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(20.dp))
-                Text("Tag by hand instead", modifier = Modifier.padding(start = 8.dp))
+                Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(22.dp))
+                Text("Tag by hand instead", style = ObStyle.button, modifier = Modifier.padding(start = 8.dp))
             }
             Text(
-                SettingsCopy.UNSUPPORTED_HAND, style = MaterialTheme.typography.bodyMedium,
+                boldPart(SettingsCopy.UNSUPPORTED_HAND, SettingsCopy.UNSUPPORTED_HAND_BOLD), style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
             )
             TextButton(onClick = { onAction(PrivacyAction.OnPrivacyPolicyClick) }, modifier = Modifier.align(Alignment.CenterHorizontally)) {

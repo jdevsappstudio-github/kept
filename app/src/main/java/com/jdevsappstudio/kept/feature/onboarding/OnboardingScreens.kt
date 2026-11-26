@@ -34,6 +34,7 @@ import androidx.compose.material.icons.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.SmartDisplay
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -53,6 +54,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
@@ -83,14 +85,22 @@ import com.jdevsappstudio.kept.feature.home.HeroCard
 
 @Composable
 fun PromiseScreen(state: OnboardingState, onAction: (OnboardingAction) -> Unit) {
-    Page {
-        VSpace(24.dp)
+    Page(bottom = {
+        PrimaryButton("Get started", enabled = state.device != null) { onAction(OnboardingAction.OnGetStarted) }
+        LinkButton("How Kept uses AI") { onAction(OnboardingAction.OnHowKeptUsesAi) }
+        Text(
+            OnboardingRules.PROMISE_FOOT, style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
+        )
+    }) {
+        VSpace(40.dp)
         KeptMark(56.dp)
         VSpace(8.dp)
         Text(
-            OnboardingRules.PROMISE_TITLE, style = MaterialTheme.typography.displaySmall,
+            OnboardingRules.PROMISE_TITLE, style = ObStyle.promiseTitle,
             color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.semantics { heading() },
         )
+        VSpace(8.dp)
         if (state.device != null) {
             val icons = if (state.cloudPhone) {
                 listOf(Icons.Outlined.Cloud, Icons.Outlined.GridView, Icons.Outlined.ChatBubbleOutline)
@@ -104,25 +114,17 @@ fun PromiseScreen(state: OnboardingState, onAction: (OnboardingAction) -> Unit) 
                 Body("Checking this phone for built-in AI…")
             }
         }
-        VSpace(8.dp)
-        PrimaryButton("Get started", enabled = state.device != null) { onAction(OnboardingAction.OnGetStarted) }
-        LinkButton("How Kept uses AI") { onAction(OnboardingAction.OnHowKeptUsesAi) }
-        Text(
-            OnboardingRules.PROMISE_FOOT, style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
-        )
     }
 }
 
 @Composable
 private fun PromiseRow(icon: ImageVector, title: String) {
-    Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(
-            Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surface)
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp)),
+            Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
             contentAlignment = Alignment.Center,
-        ) { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(22.dp)) }
-        Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+        ) { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp)) }
+        Text(title, style = ObStyle.promiseRow, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
     }
 }
 
@@ -130,10 +132,10 @@ private fun PromiseRow(icon: ImageVector, title: String) {
 
 @Composable
 fun TypesScreen(state: OnboardingState, onAction: (OnboardingAction) -> Unit) {
-    Page {
+    Page(bottom = { PrimaryButton("Next") { onAction(OnboardingAction.OnTypesNext) } }) {
         StepHeader(1, onBack = null, onSkip = { onAction(OnboardingAction.OnSkip) })
         Title(OnboardingRules.B1_TITLE)
-        Body(OnboardingRules.B1_BODY)
+        Body(boldPart(OnboardingRules.B1_BODY, OnboardingRules.B1_BODY_BOLD))
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             OnboardingRules.B1_TYPES.chunked(2).forEach { pair ->
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -144,29 +146,36 @@ fun TypesScreen(state: OnboardingState, onAction: (OnboardingAction) -> Unit) {
                 }
             }
         }
-        VSpace(4.dp)
-        PrimaryButton("Next") { onAction(OnboardingAction.OnTypesNext) }
     }
 }
 
 @Composable
 private fun TypeTile(type: SaveType, checked: Boolean, modifier: Modifier, onToggle: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
+    // H73: a chip, not a checkbox row. Picked = tint + 2dp border + a check in place of the type icon.
     Row(
         modifier
-            .heightIn(min = 52.dp)
+            .heightIn(min = 56.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(if (checked) scheme.primary.copy(alpha = 0.06f) else scheme.surface)
+            .background(if (checked) scheme.primary.copy(alpha = 0.14f) else scheme.surface)
             .border(if (checked) 2.dp else 1.dp, if (checked) scheme.primary else scheme.outlineVariant, RoundedCornerShape(14.dp))
             .toggleable(value = checked, role = Role.Checkbox, onValueChange = { onToggle() })
-            .padding(start = 10.dp),
+            .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(30.dp).clip(RoundedCornerShape(8.dp)).background(typeTint(type)), contentAlignment = Alignment.Center) {
-            Icon(typeIcon(type), contentDescription = null, tint = scheme.onSurface, modifier = Modifier.size(18.dp))
+        Box(
+            Modifier.size(32.dp).clip(RoundedCornerShape(9.dp)).background(if (checked) scheme.primary else typeTint(type)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                if (checked) Icons.Outlined.Check else typeIcon(type), contentDescription = null,
+                tint = if (checked) scheme.onPrimary else scheme.onSurface, modifier = Modifier.size(19.dp),
+            )
         }
-        Text(type.label, style = MaterialTheme.typography.labelLarge, color = scheme.onSurface, maxLines = 2, modifier = Modifier.weight(1f).padding(start = 8.dp))
-        Checkbox(checked = checked, onCheckedChange = null, modifier = Modifier.padding(end = 10.dp))
+        Text(
+            type.label, style = ObStyle.chip, color = scheme.onSurface, maxLines = 1, softWrap = false,
+            modifier = Modifier.weight(1f).padding(start = 10.dp),
+        )
     }
 }
 
@@ -174,7 +183,7 @@ private fun TypeTile(type: SaveType, checked: Boolean, modifier: Modifier, onTog
 
 @Composable
 fun AppsScreen(state: OnboardingState, onAction: (OnboardingAction) -> Unit) {
-    Page {
+    Page(bottom = { PrimaryButton("Next") { onAction(OnboardingAction.OnAppsNext) } }) {
         StepHeader(2, onBack = { onAction(OnboardingAction.OnBack) }, onSkip = { onAction(OnboardingAction.OnSkip) })
         Title(OnboardingRules.B2_TITLE)
         Column(Modifier.fillMaxWidth().card(MaterialTheme.colorScheme.surface, 1.dp)) {
@@ -183,8 +192,6 @@ fun AppsScreen(state: OnboardingState, onAction: (OnboardingAction) -> Unit) {
                 AppRow(app, checked = app in state.apps) { onAction(OnboardingAction.OnToggleApp(app)) }
             }
         }
-        VSpace(4.dp)
-        PrimaryButton("Next") { onAction(OnboardingAction.OnAppsNext) }
     }
 }
 
@@ -217,19 +224,16 @@ internal fun ShareApp.icon(): ImageVector = when (this) {
 
 @Composable
 fun FirstSaveScreen(state: OnboardingState, openable: ShareApp?, onAction: (OnboardingAction) -> Unit) {
-    Page {
-        StepHeader(3, onBack = { onAction(OnboardingAction.OnBack) }, onSkip = { onAction(OnboardingAction.OnSkip) })
-        ExampleCard(state)
-        Text("Now save your first thing", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground)
-        Body(OnboardingRules.firstSaveBody(state.apps, openable))
+    // H73: one skip only (the header's); 'Not now, go to Kept' dropped.
+    Page(bottom = {
         PrimaryButton("Pick a screenshot", icon = Icons.Outlined.AddPhotoAlternate, enabled = !state.adding) { onAction(OnboardingAction.OnPick) }
         if (openable != null) {
             OutlinedButton(
                 onClick = { onAction(OnboardingAction.OnOpenApp(openable)) }, shape = ButtonShape,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = ObStyle.buttonHeight),
             ) {
                 Icon(Icons.Outlined.OpenInNew, contentDescription = null, modifier = Modifier.size(20.dp))
-                Text("Open ${openable.label}", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 8.dp))
+                Text("Open ${openable.label}", style = ObStyle.button, modifier = Modifier.padding(start = 8.dp))
             }
         }
         Row(
@@ -242,7 +246,11 @@ fun FirstSaveScreen(state: OnboardingState, openable: ShareApp?, onAction: (Onbo
                 modifier = Modifier.padding(start = 10.dp),
             )
         }
-        LinkButton("Not now, go to Kept") { onAction(OnboardingAction.OnSkip) }
+    }) {
+        StepHeader(3, onBack = { onAction(OnboardingAction.OnBack) }, onSkip = { onAction(OnboardingAction.OnSkip) })
+        ExampleCard(state)
+        Title("Now save your first thing")
+        Body(OnboardingRules.firstSaveBody(state.apps, openable))
     }
 }
 
@@ -275,15 +283,22 @@ private fun ExampleCard(state: OnboardingState) {
 fun FirstCardScreen(state: OnboardingState, onAction: (OnboardingAction) -> Unit) {
     val save = state.firstSave ?: return
     val read = save.status == SaveStatus.READ
-    Page {
+    Page(bottom = {
+        PrimaryButton("Go to Kept") { onAction(OnboardingAction.OnGoToKept) }
+        when {
+            read -> LinkButton(OnboardingRules.secondaryLabel(save)) {
+                onAction(if (OnboardingRules.cardKind(save) == FirstCardKind.PLACE) OnboardingAction.OnOpenInMaps else OnboardingAction.OnOpenSave)
+            }
+            OnboardingRules.canTagByHand(save, state.device, state.pause) -> LinkButton("Tag it by hand") { onAction(OnboardingAction.OnEditTags) }
+        }
+    }) {
         VSpace(8.dp)
         Title("Your first save")
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             KeptMark(44.dp)
-            Body(
-                (if (read) OnboardingRules.readLine(save) else null)
-                    ?: OnboardingRules.pendingLine(save, state.device, state.pause, state.cloudHelp),
-            )
+            val line = (if (read) OnboardingRules.readLine(save) else null)
+                ?: OnboardingRules.pendingLine(save, state.device, state.pause, state.cloudHelp)
+            Body(boldPart(line, OnboardingRules.boldInLine(line)))
         }
         HeroCard(save, label = "KEPT")
         if (read) {
@@ -298,13 +313,6 @@ fun FirstCardScreen(state: OnboardingState, onAction: (OnboardingAction) -> Unit
                     Text("Edit tags", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 6.dp))
                 }
             }
-        }
-        PrimaryButton("Go to Kept") { onAction(OnboardingAction.OnGoToKept) }
-        when {
-            read -> LinkButton(OnboardingRules.secondaryLabel(save)) {
-                onAction(if (OnboardingRules.cardKind(save) == FirstCardKind.PLACE) OnboardingAction.OnOpenInMaps else OnboardingAction.OnOpenSave)
-            }
-            OnboardingRules.canTagByHand(save, state.device, state.pause) -> LinkButton("Tag it by hand") { onAction(OnboardingAction.OnEditTags) }
         }
     }
 }
@@ -350,31 +358,43 @@ private fun StepHeader(step: Int, onBack: (() -> Unit)?, onSkip: () -> Unit) {
     }
 }
 
+/** H73: content scrolls at the top; [bottom] (the main button and its links) stays pinned in the thumb zone. */
 @Composable
-private fun Page(content: @Composable ColumnScope.() -> Unit) {
-    Column(
-        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
-            .verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-        content = content,
-    )
+private fun Page(bottom: (@Composable ColumnScope.() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+        Column(
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            content = content,
+        )
+        if (bottom != null) {
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                content = bottom,
+            )
+        }
+    }
 }
 
 @Composable
 private fun Title(text: String) {
-    Text(text, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.semantics { heading() })
+    Text(text, style = ObStyle.title, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.semantics { heading() })
 }
 
 @Composable
-private fun Body(text: String) {
-    Text(text, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun Body(text: String) = Body(AnnotatedString(text))
+
+@Composable
+private fun Body(text: AnnotatedString) {
+    Text(text, style = ObStyle.body, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable
 internal fun PrimaryButton(label: String, icon: ImageVector? = null, enabled: Boolean = true, onClick: () -> Unit) {
-    Button(onClick = onClick, enabled = enabled, shape = ButtonShape, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
-        if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp).padding(end = 0.dp))
-        Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = if (icon != null) 8.dp else 0.dp))
+    Button(onClick = onClick, enabled = enabled, shape = ButtonShape, modifier = Modifier.fillMaxWidth().heightIn(min = ObStyle.buttonHeight)) {
+        if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp))
+        Text(label, style = ObStyle.button, modifier = Modifier.padding(start = if (icon != null) 8.dp else 0.dp))
     }
 }
 

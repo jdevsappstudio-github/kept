@@ -299,4 +299,23 @@ class OnboardingViewModelTest {
         vm.onAction(OnboardingAction.OnOpenInMaps)
         assertThat(vm.events.first()).isInstanceOf(OnboardingEvent.Launch::class)
     }
+
+    // --- H73 bold phrases
+
+    @Test
+    fun `first card line bolds the measured seconds, else Nothing left it`() {
+        assertThat(OnboardingRules.boldInLine("Read by Gemini in the cloud in 4 seconds.")).isEqualTo("in 4 seconds")
+        assertThat(OnboardingRules.boldInLine("Read on this phone in 1 second. Nothing left it.")).isEqualTo("in 1 second")
+        assertThat(OnboardingRules.boldInLine("Read on this phone. Nothing left it.")).isEqualTo("Nothing left it.")
+        assertThat(OnboardingRules.boldInLine("Reading it now…")).isNull()
+    }
+
+    @Test
+    fun `boldPart keeps the text and spans only the part`() {
+        val s = boldPart(OnboardingRules.B1_BODY, OnboardingRules.B1_BODY_BOLD)
+        assertThat(s.text).isEqualTo("Pick up to 3.")
+        assertThat(s.spanStyles.single().let { it.start to it.end }).isEqualTo(5 to 12)
+        assertThat(boldPart("Pick up to 3.", "absent").spanStyles.size).isEqualTo(0)
+        assertThat(boldPart("Pick up to 3.", null).text).isEqualTo("Pick up to 3.")
+    }
 }

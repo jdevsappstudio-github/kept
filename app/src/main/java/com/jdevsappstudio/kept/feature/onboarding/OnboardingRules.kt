@@ -76,6 +76,8 @@ object OnboardingRules {
 
     const val B1_TITLE = "What do you save most?"
     const val B1_BODY = "Pick up to 3."
+    /** H73: the bold part of [B1_BODY]. */
+    const val B1_BODY_BOLD = "up to 3"
     const val B2_TITLE = "Where do you save from?"
 
     fun firstSaveBody(apps: List<ShareApp>, openable: ShareApp?): String {
@@ -121,6 +123,10 @@ object OnboardingRules {
             ReadBy.HAND, null -> null
         }
     }
+
+    /** H73: the phrase set in bold on the first card's line: the measured seconds, or 'Nothing left it.' */
+    fun boldInLine(line: String): String? =
+        Regex("""in \d+ seconds?""").find(line)?.value ?: "Nothing left it.".takeIf { it in line }
 
     /** Under a card that isn't read yet, or couldn't be. */
     fun pendingLine(save: Save, device: DeviceModelState?, pause: QueuePause, cloudHelp: Boolean): String = when {

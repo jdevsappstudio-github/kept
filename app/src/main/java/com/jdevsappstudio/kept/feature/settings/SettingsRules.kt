@@ -39,6 +39,9 @@ object SettingsCopy {
         "No on-device AI (Gemini Nano) here, so Kept sends the screenshot images and text of your saves to Google Gemini " +
             "to be read. Screenshots can hold private details: messages, addresses, codes."
     const val UNSUPPORTED_HAND = "By hand, nothing leaves the phone."
+    /** H73: bold parts of the body and hand lines. */
+    fun unsupportedBodyBold(reads: MeterView?): String? = reads?.let { "Free: ${it.limit} a day." }
+    const val UNSUPPORTED_HAND_BOLD = "nothing leaves the phone"
 
     fun appearanceLine(mode: ThemeMode) = "${mode.label} mode"
 
