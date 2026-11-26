@@ -8,8 +8,11 @@ Edit only `appVersionName` in `app/build.gradle.kts`; `versionCode = MAJOR*10000
 
 ## Signing
 Upload key `kept-upload` in the owner's keystore folder, `keystore.properties` (gitignored) at the repo root.
-Play App Signing on. After the first upload: add Play's **app signing** SHA-256 (and the upload SHA-256) to the
-Firebase Android app, or Play Integrity / App Check fails in the store build.
+Play App Signing on, **quantum-ready (hybrid) key**: Play signs SDK 37+ with the new classical+PQC key (85:AF:0E:CB…79:FB)
+and older Android with the *previous* classical key (87:0A:E6:3D…3D:A4, Console → App signing → Previous app signing keys).
+**All three** SHA-256s (both app-signing + upload F0:9F:6D…3B) must be on the Firebase Android app, or App Check says
+'App attestation failed' on phones below Android 17 (cost 2 h on 26 Nov). Check a Play install with
+`apksigner verify -v --print-certs base.apk` (the V3.0 signer is what older phones present).
 
 ## MANDATORY before any Play upload: release APK launch check
 R8 can strip Firebase registrars (Keel 1.0.4 crashed on launch from Play). Back up the debug app's data first
