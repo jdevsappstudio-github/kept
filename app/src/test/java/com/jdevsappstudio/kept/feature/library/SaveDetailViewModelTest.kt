@@ -11,6 +11,9 @@ import com.jdevsappstudio.kept.R
 import com.jdevsappstudio.kept.core.model.AddItemResult
 import com.jdevsappstudio.kept.core.model.ReadBy
 import com.jdevsappstudio.kept.core.model.SaveItem
+import com.jdevsappstudio.kept.core.model.SentKind
+import com.jdevsappstudio.kept.core.model.SentRequest
+import com.jdevsappstudio.kept.data.ask.FakeSentLog
 import com.jdevsappstudio.kept.core.model.SaveStatus
 import com.jdevsappstudio.kept.core.model.SaveType
 import com.jdevsappstudio.kept.data.capture.FakeCopier
@@ -38,7 +41,8 @@ class SaveDetailViewModelTest {
     private val fill = FakeFillRepository(settings, quota)
     private val handle = SavedStateHandle(mapOf(SaveDetailViewModel.ARG_ID to 1L))
 
-    private fun vm() = SaveDetailViewModel(handle, library, snackbars, fill, Keeper(saveStore, FakeCopier()), quota, settings)
+    private val sentLog = FakeSentLog()
+    private fun vm() = SaveDetailViewModel(handle, library, snackbars, fill, Keeper(saveStore, FakeCopier()), quota, settings, sentLog)
     private fun link(id: Long, filledAt: Long? = null) =
         save(id, type = SaveType.VIDEO).copy(url = "https://instagram.com/reel/abc", sharedText = "Caption", filledAt = filledAt)
     private fun item(id: Long, name: String) = SaveItem(id, name, hidden = false, otherSaves = 0)
@@ -234,5 +238,23 @@ class SaveDetailViewModelTest {
         vm.onAction(SaveDetailAction.OnScreenshotPicked("img:abc"))
         assertThat(saveStore.attached.keys.toList()).containsExactly(1L)
         assertThat(snackbars.next().text.resId()).isEqualTo(R.string.snack_shot_reading)
+    }
+
+    @Test
+    fun `cloud chip opens the save's newest sent request, or the list when it's gone`() = runTest {
+        library.put(link(1, filledAt = 5))
+        val vm = vm()
+        keepActive(vm.state)
+        vm.events.test {
+            vm.onAction(SaveDetailAction.OnCloudChipClick)
+            assertThat(awaitItem()).isEqualTo(SaveDetailEvent.OpenSent(null))
+            sentLog.rows.value = listOf(
+                SentRequest(7, 100, SentKind.READ, "x", 0, saveId = 1),
+                SentRequest(8, 200, SentKind.FILL_IN, "y", 0, saveId = 1),
+                SentRequest(9, 300, SentKind.ASK, "z", 0, saveId = null),
+            )
+            vm.onAction(SaveDetailAction.OnCloudChipClick)
+            assertThat(awaitItem()).isEqualTo(SaveDetailEvent.OpenSent(8))
+        }
     }
 }

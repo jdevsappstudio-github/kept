@@ -28,6 +28,9 @@ data class TypeChip(val type: SaveType, val count: Int)
 
 data class TagCount(val tag: String, val count: Int)
 
+/** k-home-early hint: the kind closest to its first shelf ('Places in Goa: 2 of 3'). */
+data class NearShelf(val title: String, val saves: Int)
+
 /** H50: how every save list draws. */
 enum class ListLayout { ROWS, GRID }
 

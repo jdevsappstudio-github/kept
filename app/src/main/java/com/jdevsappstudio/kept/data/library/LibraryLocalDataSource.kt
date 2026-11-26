@@ -2,6 +2,7 @@ package com.jdevsappstudio.kept.data.library
 
 import androidx.paging.PagingData
 import com.jdevsappstudio.kept.core.model.AddItemResult
+import com.jdevsappstudio.kept.core.model.NearShelf
 import com.jdevsappstudio.kept.core.model.Save
 import com.jdevsappstudio.kept.core.model.SaveFilter
 import com.jdevsappstudio.kept.core.model.SaveItem
@@ -14,6 +15,7 @@ import com.jdevsappstudio.kept.core.model.SourceCounts
 import com.jdevsappstudio.kept.core.model.TagCount
 import com.jdevsappstudio.kept.core.model.TypeChip
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 /** The library as home, lists, shelves, detail and the edit sheet see it (H51 step 1). Every call is main-safe. */
 interface LibraryLocalDataSource {
@@ -34,6 +36,8 @@ interface LibraryLocalDataSource {
 
     /** Every shelf in display order, hidden ones included (k-shelves); home takes [ShelfOrder.onHome]. */
     fun observeShelves(): Flow<List<Shelf>>
+    /** k-home-early hint: the kind closest to 3 saves; null when no read save has a kind yet. */
+    fun observeNearShelf(): Flow<NearShelf?> = flowOf(null)
     /** Saves kept since [since] (home subtitle 'N new this week'). */
     fun observeCountSince(since: Long): Flow<Int>
     fun observeShelfEntries(shelf: String, tag: String? = null): Flow<List<ShelfEntry>>

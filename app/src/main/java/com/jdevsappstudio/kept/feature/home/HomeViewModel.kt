@@ -3,6 +3,7 @@ package com.jdevsappstudio.kept.feature.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jdevsappstudio.kept.R
+import com.jdevsappstudio.kept.core.model.NearShelf
 import com.jdevsappstudio.kept.core.model.QueueCounts
 import com.jdevsappstudio.kept.core.presentation.SnackbarAction
 import com.jdevsappstudio.kept.core.presentation.Snackbars
@@ -55,6 +56,8 @@ data class HomeState(
     val collections: List<SaveCollection> = emptyList(),
     /** "4 saves mention Pune" card, at most one (H55). */
     val suggestion: CollectionSuggestion? = null,
+    /** k-home-early hint: 'Places in Goa: 2 of 3'. */
+    val nearShelf: NearShelf? = null,
     /** Subtitle "12 new this week" (saves kept in the last 7 days). */
     val newThisWeek: Int = 0,
     /** Subtitle tail: 'all read on this phone' / 'read with Gemini in the cloud'. */
@@ -104,6 +107,8 @@ sealed interface HomeAction {
     data object OnClearExamples : HomeAction
     /** k-ob-ready's phone-AI line → k-model or k-unsupported. */
     data class OnPhoneLineClick(val target: PhoneLine.Target) : HomeAction
+    /** 'Reading 12 of 64 · Pause' (10 or more) and '52 waiting · paused · Resume'. */
+    data class SetPaused(val paused: Boolean) : HomeAction
     /** Debug panel only: checks delete + the app-wide Undo snackbar on a real library. */
     data object DebugDeleteHero : HomeAction
 }
@@ -129,6 +134,8 @@ class HomeViewModel(
     /** Today's cloud reads meter ('3 of 100 cloud reads left today'); null = never shown. */
     reads: Flow<MeterView?> = flowOf(null),
     private val examples: ExampleSaves = ExampleSaves.NONE,
+    /** ReadQueue.hold in the app. */
+    private val holdReading: (Boolean) -> Unit = {},
     clock: () -> Long = System::currentTimeMillis,
 ) : ViewModel() {
 
@@ -151,8 +158,9 @@ class HomeViewModel(
         collections.observeCollections(),
         collections.observeSuggestibleTags(),
         settings.dismissedSuggestions,
-    ) { shelves, all, tags, dismissed ->
-        Organised(shelves, all, CollectionSuggestions.pick(tags, shelves, all, dismissed))
+        library.observeNearShelf(),
+    ) { shelves, all, tags, dismissed, near ->
+        Organised(shelves, all, CollectionSuggestions.pick(tags, shelves, all, dismissed), near)
     }
 
     val state: StateFlow<HomeState> = combine(
@@ -165,7 +173,7 @@ class HomeViewModel(
         HomeState(
             counts = st.q.counts, route = st.q.route, pause = st.q.pause, cloudHelp = st.cloudHelp,
             chips = chips, hero = hero, shelves = ShelfOrder.onHome(o.shelves), allShelves = o.shelves.size,
-            collections = o.collections, suggestion = o.suggestion,
+            collections = o.collections, suggestion = o.suggestion, nearShelf = o.near,
             newThisWeek = week, readsWith = st.readsWith, lines = st.lines, loaded = true, ready = rdy,
             examples = ex,
         )
@@ -198,6 +206,7 @@ class HomeViewModel(
                     )
                 }
             }
+            is HomeAction.SetPaused -> holdReading(action.paused)
             HomeAction.OnTryExamples -> viewModelScope.launch { examples.add() }
             HomeAction.OnClearExamples -> {
                 val ids = state.value.examples.takeIf { it.isNotEmpty() } ?: return
@@ -244,4 +253,4 @@ private fun Flow<QueueView>.scanBatch(): Flow<Pair<QueueView, Int?>> =
 
 private const val WEEK_MS = 7L * 24 * 60 * 60 * 1000
 
-private data class Organised(val shelves: List<Shelf>, val collections: List<SaveCollection>, val suggestion: CollectionSuggestion?)
+private data class Organised(val shelves: List<Shelf>, val collections: List<SaveCollection>, val suggestion: CollectionSuggestion?, val near: NearShelf?)

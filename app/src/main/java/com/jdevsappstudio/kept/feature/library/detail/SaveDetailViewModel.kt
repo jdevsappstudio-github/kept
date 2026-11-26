@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jdevsappstudio.kept.R
 import com.jdevsappstudio.kept.core.model.ReadBy
+import com.jdevsappstudio.kept.data.sent.SentLogLocalDataSource
 import com.jdevsappstudio.kept.core.model.Save
 import com.jdevsappstudio.kept.core.model.SaveItem
 import com.jdevsappstudio.kept.core.model.SaveStatus
@@ -24,6 +25,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -79,6 +81,8 @@ sealed interface SaveDetailAction {
     data object OnShareClick : SaveDetailAction
     data object OnBackClick : SaveDetailAction
     data object OnFillInClick : SaveDetailAction
+    /** Cloud chip (cloud read or filled in): k-sent opened at this save's latest request. */
+    data object OnCloudChipClick : SaveDetailAction
     /** k-link 'Add a screenshot': the Root opens the photo picker ([SaveDetailEvent.PickScreenshot]). */
     data object OnAddScreenshotClick : SaveDetailAction
     /** The picker's result as a content URI string; null = cancelled (the save stays as it was). */
@@ -94,6 +98,8 @@ sealed interface SaveDetailEvent {
     data object PickScreenshot : SaveDetailEvent
     /** 0 answers left: k-cloud-out. After an ad the Root sends [SaveDetailAction.OnAnswersGranted] and the fill goes. */
     data object OpenCloudOut : SaveDetailEvent
+    /** k-sent at [sentId] (null = the whole list, e.g. the log row was pruned). */
+    data class OpenSent(val sentId: Long?) : SaveDetailEvent
 }
 
 private data class Ui(val dialog: DetailDialog? = null, val editingItem: SaveItem? = null)
@@ -106,6 +112,7 @@ class SaveDetailViewModel(
     private val keeper: Keeper,
     quota: CloudQuota,
     private val settings: SettingsStore,
+    private val sentLog: SentLogLocalDataSource,
 ) : ViewModel() {
 
     private val id: Long = checkNotNull(savedStateHandle.get<Long>(ARG_ID))
@@ -165,6 +172,10 @@ class SaveDetailViewModel(
                 ui.update { it.copy(dialog = null) }
             }
             SaveDetailAction.OnFillInClick -> startFill()
+            SaveDetailAction.OnCloudChipClick -> viewModelScope.launch {
+                val sentId = sentLog.observe().first().firstOrNull { it.saveId == id }?.id // newest first
+                _events.send(SaveDetailEvent.OpenSent(sentId))
+            }
             SaveDetailAction.OnAddScreenshotClick ->
                 if (state.value.link != null) _events.trySend(SaveDetailEvent.PickScreenshot)
             is SaveDetailAction.OnScreenshotPicked -> action.ref?.let(::attach)

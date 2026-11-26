@@ -92,6 +92,13 @@ abstract class LibraryDao {
     )
     abstract fun observeShelves(): Flow<List<ShelfRow>>
 
+    /** k-home-early: the kind with the most real saves still under 3 (newest breaks a tie; Try 3 examples don't count). */
+    @Query(
+        "SELECT v.shelf AS kind, sh.name AS name, COUNT(*) AS saves FROM shelf_saves v JOIN saves s ON s.id = v.saveId " +
+            "LEFT JOIN shelves sh ON sh.kind = v.shelf WHERE s.example = 0 GROUP BY v.shelf, sh.name HAVING COUNT(*) < 3 ORDER BY COUNT(*) DESC, MAX(v.saveId) DESC LIMIT 1",
+    )
+    abstract fun observeNearShelf(): Flow<NearShelfRow?>
+
     /** Tile pictures: per shelf, the 3 newest saves that have a picture (thumb first, else the original). */
     @Query(
         "SELECT v.shelf AS grp, COALESCE(s.thumbPath, s.imagePath) AS path FROM shelf_saves v JOIN saves s ON s.id = v.saveId " +
@@ -275,6 +282,8 @@ data class ShelfRow(
     val hidden: Boolean,
     val position: Int?,
 )
+
+data class NearShelfRow(val kind: String, val name: String?, val saves: Int)
 
 data class ShelfEntryRow(
     val itemKey: String,

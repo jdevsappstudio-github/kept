@@ -3,7 +3,9 @@ package com.jdevsappstudio.kept.feature.home
 import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
 import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import com.jdevsappstudio.kept.core.model.QueueCounts
 import com.jdevsappstudio.kept.data.queue.QueuePause
 import com.jdevsappstudio.kept.data.queue.ReadRoute
@@ -60,5 +62,20 @@ class HomeLinesTest {
         assertThat(HomeLines.readsWith(ReadRoute.DEVICE, cloudHelp = true)).isEqualTo(ReadsWith.DEVICE)
         assertThat(HomeLines.readsWith(null, cloudHelp = true)).isEqualTo(ReadsWith.CLOUD)
         assertThat(HomeLines.readsWith(null, cloudHelp = false)).isEqualTo(ReadsWith.UNKNOWN)
+    }
+
+    @Test
+    fun `pause is offered from 10 saves in the batch, not for a small share`() {
+        val small = HomeLines.lines(QueueCounts(queued = 8, reading = 1, needsLook = 0, read = 0), 0, ReadRoute.CLOUD, QueuePause.NONE, true, null)
+        assertThat((small.single() as HomeLine.Reading).canPause).isFalse()
+        val big = HomeLines.lines(QueueCounts(queued = 9, reading = 1, needsLook = 0, read = 0), 0, ReadRoute.CLOUD, QueuePause.NONE, true, null)
+        assertThat((big.single() as HomeLine.Reading).canPause).isTrue()
+    }
+
+    @Test
+    fun `a held queue waits with 'paused', not 'Reading'`() {
+        val lines = HomeLines.lines(QueueCounts(queued = 52, reading = 0, needsLook = 0, read = 12), 0, ReadRoute.CLOUD, QueuePause.HELD, true, null)
+        assertThat(lines).containsExactly(HomeLine.Waiting(52, QueuePause.HELD))
+        assertThat(HomeLines.waitReason(QueuePause.HELD)).isEqualTo("paused")
     }
 }

@@ -13,6 +13,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
+import com.jdevsappstudio.kept.core.model.NearShelf
 import com.jdevsappstudio.kept.core.model.NewSave
 import com.jdevsappstudio.kept.core.model.ReadBy
 import com.jdevsappstudio.kept.core.model.SaveFilter
@@ -63,6 +64,16 @@ class LibraryDataSourceTest {
         db.openHelper.readableDatabase.query("SELECT rowid FROM search_fts WHERE search_fts MATCH ?", arrayOf("$term*")).use { c ->
             buildList { while (c.moveToNext()) add(c.getLong(0)) }
         }
+
+    @Test fun nearShelfIsTheKindClosestToThree() = runTest {
+        assertThat(lib.observeNearShelf().first()).isNull()
+        save("Shoes 1", "shoes", type = "product")
+        save("Goa beach", "places in goa", type = "place")
+        save("Goa fort", "places in goa", type = "place")
+        assertThat(lib.observeNearShelf().first()).isEqualTo(NearShelf("Places in goa", 2))
+        save("Goa market", "places in goa", type = "place") // now a shelf: the hint names the next closest
+        assertThat(lib.observeNearShelf().first()).isEqualTo(NearShelf("Shoes", 1))
+    }
 
     @Test fun shelfNeedsThreeSavesAndMergesItems() = runTest {
         save("5 thrillers", "movies", items = listOf("Prisoners", "Gone Girl (2014)"))

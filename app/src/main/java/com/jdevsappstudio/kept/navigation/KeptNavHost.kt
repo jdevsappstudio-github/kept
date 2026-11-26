@@ -152,6 +152,7 @@ fun KeptNavHost(openSave: OpenRequest?, onSaveOpened: () -> Unit, nav: NavHostCo
                     onBack = { nav.popBackStack() },
                     onEdit = { nav.navigate(EditSaveRoute(longArrayOf(it))) },
                     onOpenCloudOut = { nav.navigate(CloudOutRoute()) },
+                    onOpenSent = { nav.navigate(SentRoute(it)) },
                     answersGranted = granted,
                     onGrantConsumed = { entry.savedStateHandle[KEY_ANSWERS_GRANTED] = false },
                 )
