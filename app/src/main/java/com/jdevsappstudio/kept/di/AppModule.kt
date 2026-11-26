@@ -25,6 +25,7 @@ import com.jdevsappstudio.kept.data.queue.WorkBackgroundReads
 import org.koin.androidx.workmanager.dsl.worker
 import com.jdevsappstudio.kept.feature.home.HomeViewModel
 import com.jdevsappstudio.kept.feature.home.QueueView
+import com.jdevsappstudio.kept.feature.needlook.NeedLookViewModel
 import com.jdevsappstudio.kept.core.presentation.Snackbars
 import com.jdevsappstudio.kept.feature.library.detail.SaveDetailViewModel
 import com.jdevsappstudio.kept.feature.library.edit.EditSaveViewModel
@@ -141,6 +142,13 @@ val appModule = module {
         ReadingViewModel(
             get(), get(), combine(get<SaveLocalDataSource>().observeCounts(), queue.route, queue.pause, ::QueueView),
             get(), get<PickedImports>().progress, get(),
+        )
+    }
+    viewModel {
+        val queue = get<ReadQueue>()
+        NeedLookViewModel(
+            get(), combine(get<SaveLocalDataSource>().observeCounts(), queue.route, queue.pause, ::QueueView), get(), get(),
+            reads = get<CloudQuota>().observe(CloudMeter.READS),
         )
     }
     viewModel { HowToViewModel() }

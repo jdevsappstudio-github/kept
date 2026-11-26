@@ -210,7 +210,8 @@ private fun StatusLines(lines: List<HomeLine>, onAction: (HomeAction) -> Unit) {
                 is HomeLine.NeedLook -> (if (line.count == 1) "1 needs a look" else "${line.count} need a look") to Kept.colors.wait
                 is HomeLine.ReadsLeft -> "${line.left} of ${line.total} cloud reads left today" to Kept.colors.cloud
             }
-            val tap = if (line is HomeLine.NeedLook) Modifier.clickable(role = Role.Button) { onAction(HomeAction.OnNeedLookClick) } else Modifier
+            // Waiting saves are listed on Needs a look too (k-failed-cloud), so both lines open it.
+            val tap = if (line is HomeLine.NeedLook || line is HomeLine.Waiting) Modifier.clickable(role = Role.Button) { onAction(HomeAction.OnNeedLookClick) } else Modifier
             Text(text, style = MaterialTheme.typography.labelMedium, color = color, modifier = tap.heightIn(min = 24.dp))
         }
     }

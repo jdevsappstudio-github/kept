@@ -21,6 +21,8 @@ interface LibraryLocalDataSource {
     fun observeNewest(): Flow<Save?>
     /** k-reading (H63): saves kept since [since], newest first, read or not (at most [limit]). */
     fun observeSince(since: Long, limit: Int = 300): Flow<List<Save>>
+    /** k-failed: saves not read yet (waiting, reading, Needs a look), newest first (at most [limit]). */
+    fun observeUnread(limit: Int = 300): Flow<List<Save>>
     fun observeSave(id: Long): Flow<Save?>
     fun observeItems(saveId: Long): Flow<List<SaveItem>>
 

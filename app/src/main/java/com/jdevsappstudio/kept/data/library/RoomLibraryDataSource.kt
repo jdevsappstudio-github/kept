@@ -54,6 +54,9 @@ class RoomLibraryDataSource(
     override fun observeSince(since: Long, limit: Int): Flow<List<Save>> =
         dao.observeSince(since, limit).map { rows -> rows.map { it.toSave() } }.distinctUntilChanged()
 
+    override fun observeUnread(limit: Int): Flow<List<Save>> =
+        dao.observeUnread(limit).map { rows -> rows.map { it.toSave() } }.distinctUntilChanged()
+
     override fun observeSave(id: Long): Flow<Save?> = dao.observeSave(id).map { it?.toSave() }.distinctUntilChanged()
 
     override fun observeItems(saveId: Long): Flow<List<SaveItem>> =

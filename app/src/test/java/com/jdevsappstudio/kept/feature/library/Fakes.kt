@@ -94,6 +94,9 @@ class FakeLibrary : LibraryLocalDataSource {
     override fun observeSince(since: Long, limit: Int): Flow<List<Save>> = saves.map { m ->
         m.values.filter { it.createdAt >= since }.sortedWith(compareByDescending<Save> { it.createdAt }.thenByDescending { it.id }).take(limit)
     }
+    override fun observeUnread(limit: Int): Flow<List<Save>> = saves.map { m ->
+        m.values.filter { it.status != SaveStatus.READ }.sortedWith(compareByDescending<Save> { it.createdAt }.thenByDescending { it.id }).take(limit)
+    }
     override fun observeSave(id: Long): Flow<Save?> = saves.map { it[id] }
     override fun observeItems(saveId: Long): Flow<List<SaveItem>> = items.map { it[saveId].orEmpty() }
     override fun observeTypeChips(preferred: List<SaveType>): Flow<List<TypeChip>> = chips

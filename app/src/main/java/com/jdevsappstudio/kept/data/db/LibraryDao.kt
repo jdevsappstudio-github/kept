@@ -40,6 +40,11 @@ abstract class LibraryDao {
     @Query("SELECT * FROM saves WHERE deletedAt IS NULL AND createdAt >= :since ORDER BY createdAt DESC, id DESC LIMIT :limit")
     abstract fun observeSince(since: Long, limit: Int): Flow<List<SaveWithDetails>>
 
+    /** Needs a look: every save that isn't read yet (waiting, reading or given up), newest first. */
+    @Transaction
+    @Query("SELECT * FROM saves WHERE deletedAt IS NULL AND status != 'READ' ORDER BY createdAt DESC, id DESC LIMIT :limit")
+    abstract fun observeUnread(limit: Int): Flow<List<SaveWithDetails>>
+
     @Transaction
     @Query("SELECT * FROM saves WHERE id = :id AND deletedAt IS NULL")
     abstract fun observeSave(id: Long): Flow<SaveWithDetails?>

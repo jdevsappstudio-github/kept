@@ -53,6 +53,7 @@ import com.jdevsappstudio.kept.feature.library.detail.SaveDetailRoot
 import com.jdevsappstudio.kept.feature.library.edit.EditSaveRoot
 import com.jdevsappstudio.kept.feature.library.list.SaveListRoot
 import com.jdevsappstudio.kept.feature.library.shelf.ShelfRoot
+import com.jdevsappstudio.kept.feature.needlook.NeedLookRoot
 import com.jdevsappstudio.kept.feature.search.SearchRoot
 import com.jdevsappstudio.kept.feature.sent.SentRoot
 import com.jdevsappstudio.kept.feature.library.shelves.ShelvesRoot
@@ -222,7 +223,13 @@ fun KeptNavHost(openSave: Long?, onSaveOpened: () -> Unit, nav: NavHostControlle
             }
             composable<HowToRoute> { HowToRoot(onBack = { nav.popBackStack() }) }
             composable<SettingsRoute> { Stub("Settings", nav) }
-            composable<NeedLookRoute> { Stub("Needs a look", nav) }
+            composable<NeedLookRoute> {
+                NeedLookRoot(
+                    onBack = { nav.popBackStack() },
+                    onOpenSave = { nav.navigate(SaveDetailRoute(it)) },
+                    onByHand = { nav.navigate(EditSaveRoute(longArrayOf(it))) },
+                )
+            }
             composable<SentRoute> { SentRoot(onBack = { nav.popBackStack() }) }
         }
     }
@@ -236,7 +243,7 @@ const val KEY_CREATED_COLLECTION = "createdCollection"
 
 private val BAR_ROUTES: List<KClass<*>> = listOf(
     HomeRoute::class, SearchRoute::class, AskRoute::class,
-    SaveListRoute::class, ShelfRoute::class, ShelvesRoute::class, CollectionRoute::class, ReadingRoute::class,
+    SaveListRoute::class, ShelfRoute::class, ShelvesRoute::class, CollectionRoute::class, ReadingRoute::class, NeedLookRoute::class,
 )
 
 private fun NavDestination?.showsBar(): Boolean = this != null && BAR_ROUTES.any { hasRoute(it) }
