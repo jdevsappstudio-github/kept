@@ -2,7 +2,8 @@
 
 Last updated: 26 November 2026
 
-Kept saves screenshots, links and shared posts on your phone and makes them searchable. This page says what
+Kept saves screenshots, links and shared posts on your phone and makes them searchable. The same policy is at
+https://jdevsappstudio.com/kept/privacy-policy.html. This page says what
 Kept keeps, what leaves your phone, and when.
 
 ## What stays on your phone
@@ -28,19 +29,20 @@ On a phone with Gemini Nano, saves are read on the phone and nothing is sent.
 
 Every request is listed in **Settings > Privacy and AI > What was sent**, with the exact text, for 30 days.
 
-During the beta, Kept uses the free tier of the Gemini Developer API. Google may use what is sent to improve its
-products. See the [Gemini API terms](https://ai.google.dev/gemini-api/terms).
+Kept uses the paid tier of the Gemini Developer API. Under its terms, Google processes what is sent only to answer
+the request and does not use it to improve its products. See the [Gemini API terms](https://ai.google.dev/gemini-api/terms).
 
 ### Other Google services
 
 - **Firebase App Check** with Play Integrity confirms that requests come from the real Kept app.
-- **Firebase Remote Config** fetches settings such as which model to use and daily limits.
+- **Firebase Remote Config** fetches settings such as which model to use and daily limits. It sends your country,
+  language, time zone and Android version, as every Remote Config app does.
 
 Both use a Firebase installation ID. Neither receives your saves.
 
 ## What Kept does not do
 
-- No ads, no analytics, no tracking, no selling of data.
+- No ads, no analytics, no crash reporting, no tracking, no selling of data.
 - No access to your photos beyond the images you pick or share with Kept.
 
 ## Notifications
@@ -54,7 +56,7 @@ sent log from your phone. Uninstalling Kept removes everything as well.
 
 ## Children
 
-Kept is not directed at children under 13.
+Kept is meant for adults (18 and over) and is not directed at children.
 
 ## Changes
 

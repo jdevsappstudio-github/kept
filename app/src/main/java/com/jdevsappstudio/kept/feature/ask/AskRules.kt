@@ -22,7 +22,7 @@ object AskCopy {
     const val CONSENT_TITLE = "Ask uses the cloud"
     const val CONSENT_BODY =
         "To answer, Kept sends the text of the saves that match your question (titles, places, notes) to Google Gemini. " +
-            "Never your images. Answers are marked Cloud. During the beta, Google may use what is sent to improve its products."
+            "Never your images. Answers are marked Cloud. Google uses it only to answer, not to improve its products."
     const val CONSENT_YES = "Turn on Cloud help"
     const val CONSENT_NO = "Not now"
     const val CONSENT_FOOT = "Change it any time in Privacy."

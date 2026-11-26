@@ -630,7 +630,7 @@ private fun DetailDialogs(dialog: DetailDialog, noun: String, onAction: (SaveDet
         DetailDialog.CloudConsent -> Triple(
             "Fill in uses the cloud",
             "To fill this in, Kept sends only the link to Google Gemini. Never your images. Answers are marked Cloud. " +
-                "During the beta, Google may use what is sent to improve its products.\n\nChange it any time in Privacy.",
+                "Google uses it only to answer, not to improve its products.\n\nChange it any time in Privacy.",
             "Turn on Cloud help",
         )
     }

@@ -14,7 +14,7 @@ data class ReadingRowCopy(val title: String, val body: String, val opensUnsuppor
 /** Copy for k-settings, k-appearance, k-privacy, k-unsupported and About (H68, H69). Pure, so it is JVM-tested. */
 object SettingsCopy {
     const val REPO_URL = "https://github.com/jdevsappstudio-github/kept"
-    const val PRIVACY_URL = "$REPO_URL/blob/main/PRIVACY.md"
+    const val PRIVACY_URL = "https://jdevsappstudio.com/kept/privacy-policy.html"
     const val LICENSE_URL = "$REPO_URL/blob/main/LICENSE"
 
     const val READING_UPDATES_BODY = "Tell me when saves wait to be read"
@@ -24,7 +24,7 @@ object SettingsCopy {
     const val NOTIF_BLOCKED_OPEN = "Open notification settings"
 
     const val CLOUD_FOOTNOTE =
-        "Off = nothing is sent; Ask asks first. During the beta, Google may use what is sent to improve its products."
+        "Off = nothing is sent; Ask asks first. Google uses it only to answer, not to improve its products."
     const val PRIVACY_FOOTNOTE =
         "No Kept account, no Kept servers. Saves stay on this phone. Gemini (when used) sees only what is listed here."
 
@@ -93,7 +93,7 @@ object SettingsCopy {
     fun unsupportedLimits(reads: MeterView?, answers: MeterView?): String = buildString {
         append(reads?.let { "Free: ${it.limit} saves read a day. " } ?: "Free saves read every day. ")
         answers?.let { append("Questions (Ask) count separately: ${it.limit} a day. ") }
-        append("During the beta, Google may use what is sent to improve its products.")
+        append("Google uses it only to answer, not to improve its products.")
     }
 
     fun aboutLine(version: String) = "Privacy policy · Apache-2.0 · v$version"

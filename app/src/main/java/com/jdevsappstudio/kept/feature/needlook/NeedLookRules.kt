@@ -115,8 +115,8 @@ object NeedLookRules {
     const val CONSENT_TITLE = "Read your saves with cloud?"
     const val CONSENT_BODY =
         "This phone can’t read saves on its own. With Cloud help on, Kept sends each save (the image, text and link) to " +
-            "Google Gemini to be read. Cards read this way are marked Cloud. During the beta, Google may use what is sent " +
-            "to improve its products.\n\nChange it any time in Privacy."
+            "Google Gemini to be read. Cards read this way are marked Cloud. Google uses it only to answer, " +
+            "not to improve its products.\n\nChange it any time in Privacy."
     const val CONSENT_YES = "Turn on Cloud help"
     const val CONSENT_NO = "Not now"
 }
